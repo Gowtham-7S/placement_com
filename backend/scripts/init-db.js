@@ -56,21 +56,17 @@ async function initializeDatabase() {
     console.log('Step 2: Creating tables and indexes...');
     const schema = fs.readFileSync(schemaPath, 'utf8');
     
-    // Split by semicolons and execute each statement
-    const statements = schema
-      .split(';')
-      .map(stmt => stmt.trim())
-      .filter(stmt => stmt.length > 0 && !stmt.startsWith('--'));
-
-    for (let i = 0; i < statements.length; i++) {
-      try {
-        await appClient.query(statements[i]);
-      } catch (err) {
-        // Ignore "already exists" errors
-        if (!err.message.includes('already exists')) {
-          console.error(`Error executing statement ${i + 1}:`, err.message);
-        }
+    // Execute the entire schema as a single query
+    // This ensures PL/pgSQL functions (using $$) are parsed correctly
+    try {
+      await appClient.query(schema);
+    } catch (err) {
+      // If tables already exist, this might fail. 
+      // For a fresh init, this is fine.
+      if (!err.message.includes('already exists')) {
+        throw err;
       }
+      console.log('⚠️  Note: Some objects may already exist.');
     }
 
     console.log('✅ Database schema created successfully\n');

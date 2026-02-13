@@ -3,7 +3,6 @@ import { useParams } from 'react-router-dom';
 import Card from '../Common/Card';
 import Loading from '../Common/Loading';
 import { experienceAPI } from '../../api';
-import './Student.css';
 
 const ExperienceDetail = () => {
   const { id } = useParams();

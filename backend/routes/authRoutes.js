@@ -1,43 +1,35 @@
 const express = require('express');
-const AuthController = require('../controllers/AuthController');
-const { validators, handleValidationErrors } = require('../middlewares/validationMiddleware');
-const authMiddleware = require('../middlewares/authMiddleware');
+const { body } = require('express-validator');
+const authController = require('../controllers/authController');
+const { protect } = require('../middlewares/authMiddleware');
 
 const router = express.Router();
 
-/**
- * Authentication Routes
- */
+// Validation Rules
+const registerValidation = [
+  body('first_name').notEmpty().withMessage('First name is required'),
+  body('last_name').notEmpty().withMessage('Last name is required'),
+  body('email').isEmail().withMessage('Please include a valid email'),
+  body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters'),
+  body('role').optional().isIn(['student', 'junior', 'admin']).withMessage('Invalid role'),
+  body('department').optional().isString(),
+  body('batch_year').optional({ checkFalsy: true }).isInt()
+];
 
-// Register
-router.post(
-  '/register',
-  validators.registerValidation,
-  handleValidationErrors,
-  AuthController.register
-);
+const loginValidation = [
+  body('email').isEmail().withMessage('Please include a valid email'),
+  body('password').exists().withMessage('Password is required')
+];
 
-// Login
-router.post(
-  '/login',
-  validators.loginValidation,
-  handleValidationErrors,
-  AuthController.login
-);
+// Routes
 
-// Get profile (requires auth)
-router.get('/me', authMiddleware, AuthController.getProfile);
+// POST /api/auth/register
+router.post('/register', registerValidation, authController.register);
 
-// Update profile (requires auth)
-router.put(
-  '/profile',
-  authMiddleware,
-  validators.updateProfileValidation,
-  handleValidationErrors,
-  AuthController.updateProfile
-);
+// POST /api/auth/login
+router.post('/login', loginValidation, authController.login);
 
-// Logout (requires auth)
-router.post('/logout', authMiddleware, AuthController.logout);
+// GET /api/auth/me
+router.get('/me', protect, authController.getMe);
 
 module.exports = router;

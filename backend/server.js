@@ -10,10 +10,10 @@ const { errorHandler, notFoundHandler } = require('./middlewares/errorHandler');
 
 // Import routes
 const authRoutes = require('./routes/authRoutes');
-const adminRoutes = require('./routes/adminRoutes');
-const studentRoutes = require('./routes/studentRoutes');
-const juniorRoutes = require('./routes/juniorRoutes');
-const publicRoutes = require('./routes/publicRoutes');
+// const adminRoutes = require('./routes/adminRoutes');
+// const studentRoutes = require('./routes/studentRoutes');
+// const juniorRoutes = require('./routes/juniorRoutes');
+// const publicRoutes = require('./routes/publicRoutes');
 
 // Initialize Express app
 const app = express();
@@ -44,10 +44,10 @@ app.use((req, res, next) => {
 // ========== ROUTES ==========
 
 app.use('/api/auth', authRoutes);
-app.use('/api/admin', adminRoutes);
-app.use('/api/student', studentRoutes);
-app.use('/api/junior', juniorRoutes);
-app.use('/api/public', publicRoutes);
+// app.use('/api/admin', adminRoutes);
+// app.use('/api/student', studentRoutes);
+// app.use('/api/junior', juniorRoutes);
+// app.use('/api/public', publicRoutes);
 
 // Root route - provide a friendly message and health quick-check
 app.get('/', (req, res) => {

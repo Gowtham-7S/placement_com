@@ -1,58 +1,17 @@
-const constants = require('../config/constants');
 const logger = require('../utils/logger');
 
-/**
- * Global Error Handler Middleware
- * Catches all errors and sends standardized response
- */
-const errorHandler = (err, req, res, next) => {
-  const status = err.status || constants.HTTP_INTERNAL_SERVER_ERROR;
-  const message = err.message || constants.ERROR_SERVER_ERROR;
-
-  // Log the error
-  logger.error({
-    status,
-    message,
-    stack: err.stack,
-    path: req.path,
-    method: req.method,
-  });
-
-  // Send error response
-  res.status(status).json({
-    success: false,
-    message,
-    error: err.code || 'ERROR',
-    ...(process.env.NODE_ENV === 'development' && { stack: err.stack }),
-  });
+exports.notFoundHandler = (req, res, next) => {
+  const error = new Error(`Not Found - ${req.originalUrl}`);
+  res.status(404);
+  next(error);
 };
 
-/**
- * 404 Not Found Middleware
- */
-const notFoundHandler = (req, res) => {
-  res.status(constants.HTTP_NOT_FOUND).json({
+exports.errorHandler = (err, req, res, next) => {
+  const statusCode = res.statusCode === 200 ? 500 : res.statusCode;
+  logger.error(`${statusCode} - ${err.message} - ${req.originalUrl} - ${req.method} - ${req.ip}`);
+  res.status(statusCode).json({
     success: false,
-    message: 'Route not found',
-    error: 'NOT_FOUND',
-    path: req.path,
+    message: err.message,
+    stack: process.env.NODE_ENV === 'production' ? null : err.stack,
   });
-};
-
-/**
- * Create Custom Error
- */
-class AppError extends Error {
-  constructor(message, status = constants.HTTP_INTERNAL_SERVER_ERROR, code = 'ERROR') {
-    super(message);
-    this.status = status;
-    this.code = code;
-    Error.captureStackTrace(this, this.constructor);
-  }
-}
-
-module.exports = {
-  errorHandler,
-  notFoundHandler,
-  AppError,
 };

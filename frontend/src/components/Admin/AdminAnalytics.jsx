@@ -1,6 +1,5 @@
 import React from 'react';
 import Card from '../Common/Card';
-import './Admin.css';
 
 const AdminAnalytics = () => {
   return (

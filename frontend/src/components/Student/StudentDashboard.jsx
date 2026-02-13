@@ -1,128 +1,61 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useContext } from 'react';
+import { AuthContext } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import Card from '../Common/Card';
-import Button from '../Common/Button';
-import Loading from '../Common/Loading';
-import { experienceAPI } from '../../api';
-import './Student.css';
+import MyExperiences from './MyExperiences';
+import SubmitExperience from './SubmitExperience';
 
 const StudentDashboard = () => {
+  const { user, logout } = useContext(AuthContext);
   const navigate = useNavigate();
-  const [stats, setStats] = useState({
-    total: 0,
-    pending: 0,
-    approved: 0,
-    rejected: 0,
-  });
-  const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState('experiences');
 
-  useEffect(() => {
-    fetchStats();
-  }, []);
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+  };
 
-  const fetchStats = async () => {
-    try {
-      setLoading(true);
-      const response = await experienceAPI.getMyExperiences({ limit: 100 });
-      const experiences = response.data.data || [];
-      
-      setStats({
-        total: experiences.length,
-        pending: experiences.filter((e) => e.approval_status === 'pending').length,
-        approved: experiences.filter((e) => e.approval_status === 'accepted').length,
-        rejected: experiences.filter((e) => e.approval_status === 'rejected').length,
-      });
-    } catch (error) {
-      console.error('Failed to load stats:', error);
-    } finally {
-      setLoading(false);
+  const renderContent = () => {
+    switch (activeTab) {
+      case 'experiences':
+        return <MyExperiences />;
+      case 'submit':
+        return <SubmitExperience />;
+      default:
+        return <MyExperiences />;
     }
   };
 
   return (
-    <div className="student-dashboard">
-      <div className="dashboard-header">
-        <h1>Student Dashboard</h1>
-        <p>Track your interview experiences and submissions</p>
-      </div>
+    <div className="min-h-screen bg-gray-100 flex">
+      {/* Sidebar */}
+      <aside className="w-64 bg-indigo-800 text-white flex flex-col">
+        <div className="p-6 text-2xl font-bold border-b border-indigo-700">
+          Student Portal
+        </div>
+        <nav className="flex-1 p-4 space-y-2">
+          <button
+            onClick={() => setActiveTab('experiences')}
+            className={`w-full text-left px-4 py-2 rounded ${activeTab === 'experiences' ? 'bg-indigo-900' : 'hover:bg-indigo-700'}`}
+          >
+            My Experiences
+          </button>
+          <button
+            onClick={() => setActiveTab('submit')}
+            className={`w-full text-left px-4 py-2 rounded ${activeTab === 'submit' ? 'bg-indigo-900' : 'hover:bg-indigo-700'}`}
+          >
+            Submit Experience
+          </button>
+        </nav>
+        <div className="p-4 border-t border-indigo-700">
+          <div className="mb-2 text-sm text-indigo-200">Logged in as {user?.name}</div>
+          <button onClick={handleLogout} className="w-full bg-red-600 hover:bg-red-700 px-4 py-2 rounded text-sm">Logout</button>
+        </div>
+      </aside>
 
-      <div className="dashboard-stats">
-        <div className="stat-card">
-          <div className="stat-value">{stats.total}</div>
-          <div className="stat-label">Total Submissions</div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-value" style={{ color: '#f59e0b' }}>
-            {stats.pending}
-          </div>
-          <div className="stat-label">Pending Review</div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-value" style={{ color: '#10b981' }}>
-            {stats.approved}
-          </div>
-          <div className="stat-label">Approved</div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-value" style={{ color: '#dc2626' }}>
-            {stats.rejected}
-          </div>
-          <div className="stat-label">Rejected</div>
-        </div>
-      </div>
-
-      <div className="dashboard-section">
-        <h2 className="section-title">Quick Actions</h2>
-        <div className="dashboard-actions">
-          <Button
-            label="+ Submit New Experience"
-            onClick={() => navigate('/student/submit-experience')}
-            variant="primary"
-          />
-          <Button
-            label="View My Submissions"
-            onClick={() => navigate('/student/experiences')}
-            variant="secondary"
-          />
-        </div>
-      </div>
-
-      <div className="dashboard-section">
-        <h2 className="section-title">Next Steps</h2>
-        <Card>
-          <Card.Body>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              <div style={{ display: 'flex', gap: '12px' }}>
-                <span style={{ fontSize: '24px' }}>📝</span>
-                <div>
-                  <div style={{ fontWeight: '600', marginBottom: '4px' }}>Submit Interview Experience</div>
-                  <div style={{ fontSize: '14px', color: 'var(--text-secondary)' }}>
-                    Share your interview details including rounds, questions, and feedback
-                  </div>
-                </div>
-              </div>
-              <div style={{ display: 'flex', gap: '12px' }}>
-                <span style={{ fontSize: '24px' }}>⏳</span>
-                <div>
-                  <div style={{ fontWeight: '600', marginBottom: '4px' }}>Wait for Admin Review</div>
-                  <div style={{ fontSize: '14px', color: 'var(--text-secondary)' }}>
-                    Admins will review and approve your submission
-                  </div>
-                </div>
-              </div>
-              <div style={{ display: 'flex', gap: '12px' }}>
-                <span style={{ fontSize: '24px' }}>📊</span>
-                <div>
-                  <div style={{ fontWeight: '600', marginBottom: '4px' }}>Contribute to Database</div>
-                  <div style={{ fontSize: '14px', color: 'var(--text-secondary)' }}>
-                    Your approved experiences help other students prepare
-                  </div>
-                </div>
-              </div>
-            </div>
-          </Card.Body>
-        </Card>
-      </div>
+      {/* Main Content */}
+      <main className="flex-1 p-8 overflow-y-auto">
+        {renderContent()}
+      </main>
     </div>
   );
 };

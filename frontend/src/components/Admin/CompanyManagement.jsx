@@ -1,12 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import Card from '../Common/Card';
-import Button from '../Common/Button';
-import Input from '../Common/Input';
-import Modal from '../Common/Modal';
-import Alert from '../Common/Alert';
-import Loading from '../Common/Loading';
 import { companyAPI } from '../../api';
-import './Admin.css';
+import { 
+  Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, 
+  Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField, 
+  Alert, CircularProgress, IconButton, Typography 
+} from '@mui/material';
+import { Edit as EditIcon, Delete as DeleteIcon, Add as AddIcon, Language as WebIcon } from '@mui/icons-material';
 
 const CompanyManagement = () => {
   const [companies, setCompanies] = useState([]);
@@ -96,125 +95,148 @@ const CompanyManagement = () => {
     }));
   };
 
-  if (loading) return <Loading message="Loading companies..." />;
+  if (loading) return <div className="flex justify-center p-8"><CircularProgress /></div>;
 
   return (
-    <div className="dashboard">
-      <div className="dashboard-header">
-        <h1>Company Management</h1>
-        <p>Add, edit, or manage placement companies</p>
-      </div>
-
-      <div className="dashboard-actions">
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <div>
+          <Typography variant="h4" className="font-bold text-gray-800">Company Management</Typography>
+          <Typography variant="body1" className="text-gray-600">Add, edit, or manage placement companies</Typography>
+        </div>
         <Button
-          label="+ Add Company"
+          variant="contained"
+          color="primary"
+          startIcon={<AddIcon />}
           onClick={() => handleOpenModal()}
-          variant="primary"
-        />
+        >
+          Add Company
+        </Button>
       </div>
 
       {alert && (
         <Alert
-          type={alert.type}
-          message={alert.message}
+          severity={alert.type}
           onClose={() => setAlert(null)}
-        />
+          className="mb-4"
+        >
+          {alert.message}
+        </Alert>
       )}
 
-      <div className="items-grid">
-        {companies.map((company) => (
-          <Card key={company.id}>
-            <Card.Body>
-              <div className="item-card-title">{company.name}</div>
-              <div className="item-card-desc" style={{ marginBottom: '12px' }}>
-                {company.industry} • {company.company_size}
-              </div>
-              {company.website && (
-                <a href={company.website} target="_blank" rel="noopener noreferrer" style={{ fontSize: '12px' }}>
-                  Website →
-                </a>
-              )}
-              <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
-                <Button
-                  label="Edit"
-                  onClick={() => handleOpenModal(company)}
-                  variant="secondary"
-                  size="small"
-                />
-                <Button
-                  label="Delete"
-                  onClick={() => handleDelete(company.id)}
-                  variant="danger"
-                  size="small"
-                />
-              </div>
-            </Card.Body>
-          </Card>
-        ))}
-      </div>
+      <TableContainer component={Paper} elevation={2}>
+        <Table>
+          <TableHead className="bg-gray-50">
+            <TableRow>
+              <TableCell className="font-bold">Name</TableCell>
+              <TableCell>Industry</TableCell>
+              <TableCell>Size</TableCell>
+              <TableCell>Website</TableCell>
+              <TableCell align="right">Actions</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {companies.map((company) => (
+              <TableRow key={company.id} hover>
+                <TableCell className="font-medium">{company.name}</TableCell>
+                <TableCell>{company.industry}</TableCell>
+                <TableCell>{company.company_size}</TableCell>
+                <TableCell>
+                  {company.website && (
+                    <a href={company.website} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800">
+                      <WebIcon fontSize="small" />
+                    </a>
+                  )}
+                </TableCell>
+                <TableCell align="right">
+                  <IconButton onClick={() => handleOpenModal(company)} color="primary" size="small">
+                    <EditIcon />
+                  </IconButton>
+                  <IconButton onClick={() => handleDelete(company.id)} color="error" size="small">
+                    <DeleteIcon />
+                  </IconButton>
+                </TableCell>
+              </TableRow>
+            ))}
+            {companies.length === 0 && (
+              <TableRow>
+                <TableCell colSpan={5} align="center" className="py-8 text-gray-500">
+                  No companies found. Add one to get started.
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </TableContainer>
 
-      <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={editingId ? 'Edit Company' : 'Add Company'}>
-        <Modal.Body>
-          <form onSubmit={handleSubmit}>
-            <Input
+      <Dialog open={modalOpen} onClose={() => setModalOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>{editingId ? 'Edit Company' : 'Add Company'}</DialogTitle>
+        <DialogContent>
+          <form onSubmit={handleSubmit} className="space-y-4 mt-2">
+            <TextField
               label="Company Name"
               name="name"
+              fullWidth
               value={formData.name}
               onChange={handleChange}
-              placeholder="e.g., Google India"
               required
             />
-            <Input
+            <TextField
               label="Description"
               name="description"
-              type="textarea"
+              multiline
+              rows={3}
+              fullWidth
               value={formData.description}
               onChange={handleChange}
-              placeholder="Company description..."
             />
-            <Input
+            <TextField
               label="Website"
               name="website"
-              type="url"
+              fullWidth
               value={formData.website}
               onChange={handleChange}
-              placeholder="https://example.com"
             />
-            <Input
+            <div className="grid grid-cols-2 gap-4">
+              <TextField
               label="Industry"
               name="industry"
+              fullWidth
               value={formData.industry}
               onChange={handleChange}
-              placeholder="Technology, Finance, etc."
             />
-            <Input
+            <TextField
               label="Company Size"
               name="company_size"
+              fullWidth
               value={formData.company_size}
               onChange={handleChange}
-              placeholder="e.g., 10000+"
             />
-            <Input
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <TextField
               label="Headquarters"
               name="headquarters"
+              fullWidth
               value={formData.headquarters}
               onChange={handleChange}
-              placeholder="City, Country"
             />
-            <Input
+            <TextField
               label="Founded Year"
               name="founded_year"
               type="number"
+              fullWidth
               value={formData.founded_year}
               onChange={handleChange}
             />
+            </div>
           </form>
-        </Modal.Body>
-        <Modal.Footer>
-          <Button label="Cancel" onClick={() => setModalOpen(false)} variant="outline" />
-          <Button label="Submit" onClick={handleSubmit} variant="primary" />
-        </Modal.Footer>
-      </Modal>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setModalOpen(false)}>Cancel</Button>
+          <Button onClick={handleSubmit} variant="contained" color="primary">Submit</Button>
+        </DialogActions>
+      </Dialog>
     </div>
   );
 };

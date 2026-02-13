@@ -1,14 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { useAuth } from '../../hooks/useAuth';
-import Button from '../Common/Button';
-import Input from '../Common/Input';
-import Alert from '../Common/Alert';
-import './Auth.css';
+import { AuthContext } from '../../context/AuthContext';
+import { TextField, Button, Paper, Typography, Alert, Box } from '@mui/material';
 
 const LoginPage = () => {
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { login } = useContext(AuthContext);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -19,68 +16,75 @@ const LoginPage = () => {
     setError('');
     setLoading(true);
 
-    const result = await login(email, password);
-    if (result.success) {
-      const user = result.data;
+    try {
+      const user = await login(email, password);
       // Redirect based on role
       if (user.role === 'admin') {
-        navigate('/admin');
+        navigate('/admin/dashboard');
       } else if (user.role === 'student') {
-        navigate('/student');
+        navigate('/student/dashboard');
       } else {
-        navigate('/junior');
+        navigate('/junior/dashboard');
       }
-    } else {
-      setError(result.error);
+    } catch (err) {
+      setError(err.message);
     }
     setLoading(false);
   };
 
   return (
-    <div className="auth-container">
-      <div className="auth-card">
-        <div className="auth-header">
-          <div className="auth-logo">📊</div>
-          <h1 className="auth-title">Login</h1>
-          <p className="auth-subtitle">Placement Intelligence Portal</p>
-        </div>
+    <div className="min-h-screen flex items-center justify-center bg-gray-100 p-4">
+      <Paper elevation={3} className="p-8 w-full max-w-md">
+        <Box className="text-center mb-6">
+          <div className="text-4xl mb-2">📊</div>
+          <Typography variant="h5" component="h1" className="font-bold">
+            Login
+          </Typography>
+          <Typography variant="body2" color="textSecondary">
+            Placement Intelligence Portal
+          </Typography>
+        </Box>
 
-        {error && <Alert type="error" message={error} onClose={() => setError('')} />}
+        {error && <Alert severity="error" className="mb-4" onClose={() => setError('')}>{error}</Alert>}
 
-        <form onSubmit={handleSubmit} className="auth-form">
-          <Input
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <TextField
             label="Email"
             type="email"
+            fullWidth
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            placeholder="your@email.com"
             required
           />
 
-          <Input
+          <TextField
             label="Password"
             type="password"
+            fullWidth
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            placeholder="Enter your password"
             required
           />
 
           <Button
             type="submit"
-            label="Login"
-            loading={loading}
+            variant="contained"
+            color="primary"
             fullWidth
-          />
+            disabled={loading}
+            size="large"
+          >
+            {loading ? 'Logging in...' : 'Login'}
+          </Button>
         </form>
 
-        <div className="auth-footer">
+        <div className="text-center mt-6 text-sm text-gray-600">
           Don't have an account?{' '}
-          <Link to="/register" className="auth-link">
+          <Link to="/register" className="text-indigo-600 hover:underline font-medium">
             Register here
           </Link>
         </div>
-      </div>
+      </Paper>
     </div>
   );
 };

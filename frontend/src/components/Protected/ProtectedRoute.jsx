@@ -1,29 +1,25 @@
-import React from 'react';
-import { Navigate } from 'react-router-dom';
-import { useAuth } from '../../hooks/useAuth';
-import Loading from '../Common/Loading';
-import MainLayout from '../Layout/MainLayout';
+import React, { useContext } from 'react';
+import { Navigate, Outlet } from 'react-router-dom';
+import { AuthContext } from '../../context/AuthContext';
 
-const ProtectedRoute = ({ children, requiredRole = null }) => {
-  const { isAuthenticated, user, isLoading } = useAuth();
+const ProtectedRoute = ({ allowedRoles }) => {
+  const { user, loading, token } = useContext(AuthContext);
 
-  if (isLoading) {
-    return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh' }}>
-        <Loading message="Loading..." />
-      </div>
-    );
+  if (loading) {
+    return <div className="p-8 text-center">Loading...</div>;
   }
 
-  if (!isAuthenticated) {
+  // If not logged in, redirect to login
+  if (!token || !user) {
     return <Navigate to="/login" replace />;
   }
 
-  if (requiredRole && user?.role !== requiredRole) {
-    return <Navigate to="/login" replace />;
+  // If logged in but role not allowed, redirect to home or unauthorized page
+  if (allowedRoles && !allowedRoles.includes(user.role)) {
+    return <div className="p-8 text-center text-red-600">Unauthorized Access</div>;
   }
 
-  return <MainLayout>{children}</MainLayout>;
+  return <Outlet />;
 };
 
 export default ProtectedRoute;

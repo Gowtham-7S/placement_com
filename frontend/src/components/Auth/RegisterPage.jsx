@@ -1,14 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useContext, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { useAuth } from '../../hooks/useAuth';
-import Button from '../Common/Button';
-import Input from '../Common/Input';
-import Alert from '../Common/Alert';
-import './Auth.css';
+import { AuthContext } from '../../context/AuthContext';
+import { TextField, Button, Paper, Typography, Alert, Box, MenuItem } from '@mui/material';
 
 const RegisterPage = () => {
   const navigate = useNavigate();
-  const { register } = useAuth();
+  const { register } = useContext(AuthContext);
   const [formData, setFormData] = useState({
     first_name: '',
     last_name: '',
@@ -22,6 +19,19 @@ const RegisterPage = () => {
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  // Smart Role Detection based on email
+  useEffect(() => {
+    const email = formData.email;
+    if (email) {
+      if (email.includes('@placement')) {
+        setFormData(prev => ({ ...prev, role: 'admin' }));
+      } else if (/\.xx\d{2}/.test(email)) {
+        // Matches patterns like .xx23, .xx24 inside the email
+        setFormData(prev => ({ ...prev, role: 'student' }));
+      }
+    }
+  }, [formData.email]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -55,141 +65,153 @@ const RegisterPage = () => {
     if (!validateForm()) return;
 
     setLoading(true);
-    const result = await register({
-      first_name: formData.first_name,
-      last_name: formData.last_name,
-      email: formData.email,
-      password: formData.password,
-      role: formData.role,
-      phone: formData.phone || undefined,
-      department: formData.department || undefined,
-      batch_year: formData.batch_year || undefined,
-    });
+    try {
+      const user = await register({
+        first_name: formData.first_name,
+        last_name: formData.last_name,
+        email: formData.email,
+        password: formData.password,
+        role: formData.role,
+        phone: formData.phone || undefined,
+        department: formData.department || undefined,
+        batch_year: formData.batch_year || undefined,
+      });
 
-    if (result.success) {
-      navigate(formData.role === 'admin' ? '/admin' : formData.role === 'student' ? '/student' : '/junior');
-    } else {
-      setError(result.error);
+      if (user.role === 'admin') navigate('/admin/dashboard');
+      else if (user.role === 'student') navigate('/student/dashboard');
+      else navigate('/junior/dashboard');
+    } catch (err) {
+      setError(err.message);
     }
     setLoading(false);
   };
 
   return (
-    <div className="auth-container">
-      <div className="auth-card" style={{ maxWidth: '500px' }}>
-        <div className="auth-header">
-          <div className="auth-logo">📊</div>
-          <h1 className="auth-title">Register</h1>
-          <p className="auth-subtitle">Create your account</p>
-        </div>
+    <div className="min-h-screen flex items-center justify-center bg-gray-100 p-4">
+      <Paper elevation={3} className="p-8 w-full max-w-lg">
+        <Box className="text-center mb-6">
+          <div className="text-4xl mb-2">📊</div>
+          <Typography variant="h5" component="h1" className="font-bold">
+            Register
+          </Typography>
+          <Typography variant="body2" color="textSecondary">
+            Create your account
+          </Typography>
+        </Box>
 
-        {error && <Alert type="error" message={error} onClose={() => setError('')} />}
+        {error && <Alert severity="error" className="mb-4" onClose={() => setError('')}>{error}</Alert>}
 
-        <form onSubmit={handleSubmit} className="auth-form">
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-            <Input
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <TextField
               label="First Name"
               name="first_name"
+              fullWidth
               value={formData.first_name}
               onChange={handleChange}
-              placeholder="John"
               required
             />
-            <Input
+            <TextField
               label="Last Name"
               name="last_name"
+              fullWidth
               value={formData.last_name}
               onChange={handleChange}
-              placeholder="Doe"
               required
             />
           </div>
 
-          <Input
+          <TextField
             label="Email"
             name="email"
             type="email"
+            fullWidth
             value={formData.email}
             onChange={handleChange}
-            placeholder="your@email.com"
             required
           />
 
-          <Input
+          <TextField
             label="Password"
             name="password"
             type="password"
+            fullWidth
             value={formData.password}
             onChange={handleChange}
-            placeholder="At least 8 characters"
-            hint="Minimum 8 characters, 1 uppercase, 1 number"
+            helperText="Minimum 8 characters"
             required
           />
 
-          <Input
+          <TextField
             label="Confirm Password"
             name="confirmPassword"
             type="password"
+            fullWidth
             value={formData.confirmPassword}
             onChange={handleChange}
-            placeholder="Re-enter password"
             required
           />
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-            <Input
+          <div className="grid grid-cols-2 gap-4">
+            <TextField
+              select
               label="Role"
               name="role"
-              type="select"
+              fullWidth
               value={formData.role}
               onChange={handleChange}
             >
-              <option value="student">Student</option>
-              <option value="junior">Junior</option>
-              <option value="admin">Admin</option>
-            </Input>
+              <MenuItem value="student">Student</MenuItem>
+              <MenuItem value="junior">Junior</MenuItem>
+              <MenuItem value="admin">Admin</MenuItem>
+            </TextField>
 
-            <Input
+            <TextField
               label="Batch Year"
               name="batch_year"
               type="number"
+              fullWidth
               value={formData.batch_year}
               onChange={handleChange}
             />
           </div>
 
-          <Input
+          <TextField
             label="Department (Optional)"
             name="department"
+            fullWidth
             value={formData.department}
             onChange={handleChange}
-            placeholder="CS, IT, EC, etc."
           />
 
-          <Input
+          <TextField
             label="Phone (Optional)"
             name="phone"
             type="tel"
+            fullWidth
             value={formData.phone}
             onChange={handleChange}
-            placeholder="+91-9876543210"
           />
 
           <Button
             type="submit"
-            label="Create Account"
-            loading={loading}
+            variant="contained"
+            color="primary"
             fullWidth
-          />
+            disabled={loading}
+            size="large"
+          >
+            {loading ? 'Creating Account...' : 'Create Account'}
+          </Button>
         </form>
 
-        <div className="auth-footer">
+        <div className="text-center mt-6 text-sm text-gray-600">
           Already have an account?{' '}
-          <Link to="/login" className="auth-link">
+          <Link to="/login" className="text-indigo-600 hover:underline font-medium">
             Login here
           </Link>
         </div>
-      </div>
+      </Paper>
     </div>
   );
 };

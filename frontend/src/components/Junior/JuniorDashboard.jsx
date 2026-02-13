@@ -1,112 +1,61 @@
-import React from 'react';
+import React, { useState, useContext } from 'react';
+import { AuthContext } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import Card from '../Common/Card';
-import Button from '../Common/Button';
-import './Junior.css';
+import CompanyBrowser from './CompanyBrowser';
+import PreparationRoadmap from './PreparationRoadmap';
 
 const JuniorDashboard = () => {
+  const { user, logout } = useContext(AuthContext);
   const navigate = useNavigate();
+  const [activeTab, setActiveTab] = useState('companies');
 
-  const quickLinks = [
-    {
-      icon: '🔍',
-      title: 'Browse Companies',
-      description: 'Explore participating companies',
-      action: () => navigate('/junior/companies'),
-    },
-    {
-      icon: '📢',
-      title: 'View Drives',
-      description: 'Check upcoming placement drives',
-      action: () => navigate('/junior/roadmap'),
-    },
-    {
-      icon: '🎯',
-      title: 'Preparation Roadmap',
-      description: 'Get tailored preparation guide',
-      action: () => navigate('/junior/roadmap'),
-    },
-    {
-      icon: '📊',
-      title: 'Topic Insights',
-      description: 'Most asked interview topics',
-      action: () => navigate('/junior/roadmap'),
-    },
-  ];
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+  };
+
+  const renderContent = () => {
+    switch (activeTab) {
+      case 'companies':
+        return <CompanyBrowser />;
+      case 'roadmap':
+        return <PreparationRoadmap />;
+      default:
+        return <CompanyBrowser />;
+    }
+  };
 
   return (
-    <div className="junior-dashboard">
-      <div className="dashboard-header">
-        <h1>Junior Dashboard</h1>
-        <p>Explore placement opportunities and prepare effectively</p>
-      </div>
+    <div className="min-h-screen bg-gray-100 flex">
+      {/* Sidebar */}
+      <aside className="w-64 bg-indigo-800 text-white flex flex-col">
+        <div className="p-6 text-2xl font-bold border-b border-indigo-700">
+          Junior Portal
+        </div>
+        <nav className="flex-1 p-4 space-y-2">
+          <button
+            onClick={() => setActiveTab('companies')}
+            className={`w-full text-left px-4 py-2 rounded ${activeTab === 'companies' ? 'bg-indigo-900' : 'hover:bg-indigo-700'}`}
+          >
+            Browse Companies
+          </button>
+          <button
+            onClick={() => setActiveTab('roadmap')}
+            className={`w-full text-left px-4 py-2 rounded ${activeTab === 'roadmap' ? 'bg-indigo-900' : 'hover:bg-indigo-700'}`}
+          >
+            Preparation Roadmap
+          </button>
+        </nav>
+        <div className="p-4 border-t border-indigo-700">
+          <div className="mb-2 text-sm text-indigo-200">Logged in as {user?.name}</div>
+          <button onClick={handleLogout} className="w-full bg-red-600 hover:bg-red-700 px-4 py-2 rounded text-sm">Logout</button>
+        </div>
+      </aside>
 
-      <div className="items-grid">
-        {quickLinks.map((link, index) => (
-          <Card key={index}>
-            <Card.Body
-              style={{
-                textAlign: 'center',
-                cursor: 'pointer',
-                transition: 'var(--transition)',
-              }}
-              onClick={link.action}
-            >
-              <div style={{ fontSize: '32px', marginBottom: '12px' }}>{link.icon}</div>
-              <div style={{ fontWeight: '600', marginBottom: '8px', color: 'var(--text-primary)' }}>
-                {link.title}
-              </div>
-              <div style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
-                {link.description}
-              </div>
-            </Card.Body>
-          </Card>
-        ))}
-      </div>
-
-      <Card>
-        <Card.Header>How It Works</Card.Header>
-        <Card.Body>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            <div style={{ display: 'flex', gap: '12px' }}>
-              <span style={{ fontSize: '24px' }}>1️⃣</span>
-              <div>
-                <div style={{ fontWeight: '600', marginBottom: '4px' }}>Explore Companies</div>
-                <div style={{ fontSize: '14px', color: 'var(--text-secondary)' }}>
-                  Browse companies that participated in placements
-                </div>
-              </div>
-            </div>
-            <div style={{ display: 'flex', gap: '12px' }}>
-              <span style={{ fontSize: '24px' }}>2️⃣</span>
-              <div>
-                <div style={{ fontWeight: '600', marginBottom: '4px' }}>Learn from Experiences</div>
-                <div style={{ fontSize: '14px', color: 'var(--text-secondary)' }}>
-                  Read real interview experiences shared by students
-                </div>
-              </div>
-            </div>
-            <div style={{ display: 'flex', gap: '12px' }}>
-              <span style={{ fontSize: '24px' }}>3️⃣</span>
-              <div>
-                <div style={{ fontWeight: '600', marginBottom: '4px' }}>Get Insights</div>
-                <div style={{ fontSize: '14px', color: 'var(--text-secondary)' }}>
-                  View most asked topics and preparation tips
-                </div>
-              </div>
-            </div>
-            <div style={{ display: 'flex', gap: '12px' }}>
-              <span style={{ fontSize: '24px' }}>4️⃣</span>
-              <div>
-                <div style={{ fontWeight: '600', marginBottom: '4px' }}>Prepare & Apply</div>
-                <div style={{ fontSize: '14px', color: 'var(--text-secondary)' }}>
-                  Use insights to prepare and apply for drives
-                </div>
-              </div>
-            </div>
-          </div>
-        </Card.Body>
-      </Card>
+      {/* Main Content */}
+      <main className="flex-1 p-8 overflow-y-auto">
+        {renderContent()}
+      </main>
     </div>
   );
 };
