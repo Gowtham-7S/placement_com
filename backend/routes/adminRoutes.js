@@ -91,7 +91,10 @@ router.post(
   ExperienceController.rejectSubmission
 );
 
-// ========== ANALYTICS (Placeholder) ==========
-// Analytics endpoints will be added in next phase
+// ========== ANALYTICS ==========
+const AnalyticsController = require('../controllers/AnalyticsController');
+
+// Get dashboard analytics
+router.get('/analytics/dashboard', AnalyticsController.getDashboardStats);
 
 module.exports = router;

@@ -1,4 +1,7 @@
+const { pool } = require('../config/database');
 const Experience = require('../models/Experience');
+const Round = require('../models/Round');
+const Question = require('../models/Question');
 const { AppError } = require('../middlewares/errorHandler');
 const constants = require('../config/constants');
 
@@ -11,7 +14,11 @@ class ExperienceService {
    * Submit new experience
    */
   static async submitExperience(userId, experienceData) {
+    const client = await pool.connect();
     try {
+      await client.query('BEGIN');
+
+      // 1. Create Experience (Map snake_case req data to camelCase model params)
       const experience = await Experience.create({
         userId,
         driveId: experienceData.drive_id,
@@ -22,11 +29,57 @@ class ExperienceService {
         offerReceived: experienceData.offer_received,
         ctcOffered: experienceData.ctc_offered,
         isAnonymous: experienceData.is_anonymous || false,
-      });
+        interviewDuration: experienceData.interview_duration,
+        overallDifficulty: experienceData.overall_difficulty,
+        overallFeedback: experienceData.overall_feedback,
+        confidenceLevel: experienceData.confidence_level
+      }, client);
 
+      // 2. Create Rounds & Questions
+      if (experienceData.rounds && Array.isArray(experienceData.rounds)) {
+        for (const roundData of experienceData.rounds) {
+          const round = await Round.create({
+            experienceId: experience.id,
+            roundNumber: roundData.round_number,
+            roundType: roundData.round_type,
+            durationMinutes: roundData.duration_minutes,
+            result: roundData.result,
+            roundDate: roundData.round_date,
+            topics: roundData.topics,
+            questions: roundData.questions, // Just for JSON storage if model uses it
+            difficultyLevel: roundData.difficulty_level,
+            problemStatement: roundData.problem_statement,
+            approachUsed: roundData.approach_used,
+            codeSnippet: roundData.code_snippet,
+            tipsAndInsights: roundData.tips_and_insights,
+            interviewerFeedback: roundData.interviewer_feedback,
+            skillsTested: roundData.skills_tested
+          }, client);
+
+          if (roundData.questions_list && Array.isArray(roundData.questions_list)) {
+            for (const questionData of roundData.questions_list) {
+              await Question.create({
+                roundId: round.id,
+                questionText: questionData.question_text,
+                category: questionData.category,
+                subcategory: questionData.subcategory,
+                difficulty: questionData.difficulty,
+                answerProvided: questionData.answer_provided,
+                answerQuality: questionData.answer_quality,
+                isCommon: questionData.is_common
+              }, client);
+            }
+          }
+        }
+      }
+
+      await client.query('COMMIT');
       return experience;
     } catch (error) {
+      await client.query('ROLLBACK');
       throw new Error(`Submit experience error: ${error.message}`);
+    } finally {
+      client.release();
     }
   }
 

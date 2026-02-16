@@ -19,21 +19,28 @@ class Experience {
     }
   }
 
-  static async create(experienceData) {
+  static async create(experienceData, client = pool) {
     try {
       const {
-        userId, driveId, companyName, roleApplied, result: interviewResult, selected, offerReceived, ctcOffered, isAnonymous,
+        userId, driveId, companyName, roleApplied, result: interviewResult, offerReceived, ctcOffered, isAnonymous,
+        interviewDuration, overallDifficulty, overallFeedback, confidenceLevel
       } = experienceData;
 
       const query = `
-        INSERT INTO experiences (user_id, drive_id, company_name, role_applied, result, selected, offer_received, ctc_offered, is_anonymous, approval_status, submitted_at, created_at, updated_at)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'pending', NOW(), NOW(), NOW())
+        INSERT INTO experiences (
+          user_id, drive_id, company_name, role_applied, result, 
+          offer_received, ctc_offered, is_anonymous, approval_status, 
+          interview_duration, overall_difficulty, overall_feedback, confidence_level,
+          submitted_at, created_at, updated_at
+        )
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'pending', $9, $10, $11, $12, NOW(), NOW(), NOW())
         RETURNING id, company_name, role_applied, approval_status, submitted_at
       `;
 
-      const result = await pool.query(query, [
+      const result = await client.query(query, [
         userId, driveId, companyName, roleApplied, interviewResult,
-        selected || false, offerReceived || false, ctcOffered || null, isAnonymous || false,
+        offerReceived || false, ctcOffered || null, isAnonymous || false,
+        interviewDuration, overallDifficulty, overallFeedback, confidenceLevel
       ]);
 
       return result.rows[0];
