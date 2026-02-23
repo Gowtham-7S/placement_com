@@ -54,3 +54,11 @@ export const analyticsAPI = {
   getSkills: () => axiosInstance.get('/admin/analytics/skills'),
   getCompanyRate: () => axiosInstance.get('/admin/analytics/company-rate'),
 };
+
+// Junior APIs (read-only, approved experiences)
+export const juniorAPI = {
+  getCompanyInsights: (params) => axiosInstance.get('/junior/companies', { params }),
+  getCompanyExperiences: (name, params) => axiosInstance.get(`/junior/companies/${encodeURIComponent(name)}/experiences`, { params }),
+  getStats: () => axiosInstance.get('/junior/stats'),
+  getTrendingTopics: (limit) => axiosInstance.get('/junior/topics', { params: { limit } }),
+};

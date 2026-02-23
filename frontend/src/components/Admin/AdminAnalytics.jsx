@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useContext } from 'react';
 import { AuthContext } from '../../context/AuthContext';
+import { driveAPI } from '../../api';
 
 const AdminAnalytics = () => {
   const { user } = useContext(AuthContext);
@@ -13,48 +14,36 @@ const AdminAnalytics = () => {
   const fetchStats = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('/api/admin/analytics/dashboard', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
 
-      if (!response.ok) throw new Error('Failed to fetch stats');
+      // Fetch analytics and upcoming drives in parallel
+      const [analyticsResponse, drivesResponse] = await Promise.all([
+        fetch('/api/admin/analytics/dashboard', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        }),
+        driveAPI.getAll({ status: 'upcoming', limit: 5 })
+      ]);
 
-      const result = await response.json();
+      if (!analyticsResponse.ok) throw new Error('Failed to fetch stats');
 
-      // Mocking Upcoming Drives as it's not in API yet
-      const mockUpcomingDrives = [
-        { id: 1, company: 'Google', roles: 'SDE, PM', eligible: 'CSE, IT', date: '2026-02-15' },
-        { id: 2, company: 'Amazon', roles: 'SDE Intern', eligible: 'All branches', date: '2026-02-20' },
-        { id: 3, company: 'Deloitte', roles: 'Consultant', eligible: 'MBA, BBA', date: '2026-02-25' },
-      ];
+      const result = await analyticsResponse.json();
+      const upcomingDrives = drivesResponse.data.data || [];
 
       setStats({
         ...result.data,
-        upcomingDrives: mockUpcomingDrives
+        upcomingDrives
       });
     } catch (err) {
       console.error(err);
-      // Fallback mock
+      // Fallback to empty state on error
       setStats({
         overall: {
-          total_companies: 42,
-          total_drives: 8,
-          total_experiences: 156,
-          pending_approvals: 7, // Assuming this is needed
-          total_selections: 5,
-          avg_ctc: 12.5
+          total_companies: 0,
+          total_drives: 0,
+          total_experiences: 0,
+          pending_approvals: 0,
         },
-        recentActivity: [
-          { id: 1, first_name: 'Rahul', last_name: 'Kumar', company_name: 'Google', role_applied: 'SDE Intern', submitted_at: '2026-02-13', status: 'approved' },
-          { id: 2, first_name: 'Anita', last_name: 'Patel', company_name: 'Microsoft', role_applied: 'SDE-1', submitted_at: '2026-02-12', status: 'pending' },
-          { id: 3, first_name: 'Vikram', last_name: 'Joshi', company_name: 'Amazon', role_applied: 'SDE Intern', submitted_at: '2026-02-11', status: 'approved' },
-          { id: 4, first_name: 'Sneha', last_name: 'Rao', company_name: 'Flipkart', role_applied: 'Data Analyst', submitted_at: '2026-02-10', status: 'rejected' },
-        ],
-        upcomingDrives: [
-          { id: 1, company: 'Google', roles: 'SDE, PM', eligible: 'CSE, IT', date: '2026-02-15' },
-          { id: 2, company: 'Amazon', roles: 'SDE Intern', eligible: 'All branches', date: '2026-02-20' },
-          { id: 3, company: 'Deloitte', roles: 'Consultant', eligible: 'MBA, BBA', date: '2026-02-25' },
-        ],
+        recentActivity: [],
+        upcomingDrives: [],
         companyStats: []
       });
     } finally {
@@ -83,17 +72,17 @@ const AdminAnalytics = () => {
         <DashboardCard
           title="Total Companies"
           value={stats?.overall?.total_companies || 0}
-          subtitle="+5 this month"
-          subtitleColor="text-green-500"
+          subtitle={stats?.overall?.total_companies > 0 ? `${stats.overall.total_companies} registered` : 'None yet'}
+          subtitleColor="text-blue-500"
           icon="🏢"
           bgClass="bg-blue-50"
           iconClass="text-blue-600"
         />
         <DashboardCard
-          title="Active Drives"
+          title="Total Drives"
           value={stats?.overall?.total_drives || 0}
-          subtitle="3 upcoming this week"
-          subtitleColor="text-gray-500"
+          subtitle={`${stats?.upcomingDrives?.length || 0} upcoming`}
+          subtitleColor="text-indigo-500"
           icon="📢"
           bgClass="bg-indigo-50"
           iconClass="text-indigo-600"
@@ -101,7 +90,7 @@ const AdminAnalytics = () => {
         <DashboardCard
           title="Experiences Shared"
           value={stats?.overall?.total_experiences || 0}
-          subtitle="+12 this week"
+          subtitle={stats?.overall?.total_experiences > 0 ? 'Total submissions' : 'None yet'}
           subtitleColor="text-green-500"
           icon="📄"
           bgClass="bg-blue-50"
@@ -109,9 +98,9 @@ const AdminAnalytics = () => {
         />
         <DashboardCard
           title="Pending Approvals"
-          value={stats?.overall?.pending_approvals || 7} // Mocking default 7 as requested
-          subtitle="Needs review"
-          subtitleColor="text-orange-500"
+          value={stats?.overall?.pending_approvals || 0}
+          subtitle={stats?.overall?.pending_approvals > 0 ? 'Needs review' : 'All reviewed'}
+          subtitleColor={stats?.overall?.pending_approvals > 0 ? 'text-orange-500' : 'text-green-500'}
           icon="⏳"
           bgClass="bg-orange-50"
           iconClass="text-orange-600"
@@ -148,18 +137,29 @@ const AdminAnalytics = () => {
             <h3 className="text-lg font-bold text-gray-800">Upcoming Drives</h3>
           </div>
           <div className="divide-y divide-gray-50">
-            {stats?.upcomingDrives?.map((drive) => (
-              <div key={drive.id} className="p-4 flex items-center justify-between hover:bg-gray-50 transition-colors">
-                <div>
-                  <h4 className="text-sm font-bold text-gray-900">{drive.company}</h4>
-                  <p className="text-xs text-gray-500">Roles: {drive.roles}</p>
-                  <p className="text-xs text-gray-400 mt-1">Eligible: {drive.eligible}</p>
+            {stats?.upcomingDrives?.length > 0 ? (
+              stats.upcomingDrives.map((drive) => (
+                <div key={drive.id} className="p-4 flex items-center justify-between hover:bg-gray-50 transition-colors">
+                  <div>
+                    <h4 className="text-sm font-bold text-gray-900">{drive.company_name}</h4>
+                    <p className="text-xs text-gray-500">{drive.role_name}</p>
+                    {drive.eligible_batches && (
+                      <p className="text-xs text-gray-400 mt-1">Eligible: {drive.eligible_batches}</p>
+                    )}
+                  </div>
+                  <div className="text-right">
+                    <span className="text-xs font-medium text-gray-500 block">
+                      {drive.interview_date ? new Date(drive.interview_date).toLocaleDateString() : 'TBD'}
+                    </span>
+                    {drive.location && (
+                      <span className="text-xs text-gray-400">{drive.location}</span>
+                    )}
+                  </div>
                 </div>
-                <div className="text-right">
-                  <span className="text-xs font-medium text-gray-500 block">{drive.date}</span>
-                </div>
-              </div>
-            ))}
+              ))
+            ) : (
+              <div className="p-8 text-center text-gray-400 text-sm">No upcoming drives</div>
+            )}
           </div>
         </div>
       </div>

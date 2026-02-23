@@ -1,10 +1,381 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { juniorAPI } from '../../api';
+import {
+  TrendingUp as TrendingIcon,
+  Star as StarIcon,
+  ArrowBack as ArrowBackIcon,
+  AttachMoney as MoneyIcon,
+  AccessTime as TimeIcon,
+} from '@mui/icons-material';
+
+const difficultyColor = {
+  easy: 'bg-green-100 text-green-700',
+  medium: 'bg-yellow-100 text-yellow-700',
+  hard: 'bg-red-100 text-red-700',
+};
+
+const resultColor = {
+  pass: 'text-green-600',
+  fail: 'text-red-500',
+  not_sure: 'text-yellow-600',
+};
+
+const resultLabel = { pass: 'Selected ✅', fail: 'Not Selected', not_sure: 'Awaiting Result' };
 
 const CompanyBrowser = () => {
+  const [view, setView] = useState('list'); // 'list' | 'company'
+  const [companies, setCompanies] = useState([]);
+  const [selectedCompany, setSelectedCompany] = useState(null);
+  const [experiences, setExperiences] = useState([]);
+  const [expandedExp, setExpandedExp] = useState(null);
+  const [stats, setStats] = useState(null);
+  const [topics, setTopics] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [expLoading, setExpLoading] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+
+  useEffect(() => {
+    fetchInitialData();
+  }, []);
+
+  const fetchInitialData = async () => {
+    setLoading(true);
+    try {
+      const [companiesRes, statsRes, topicsRes] = await Promise.all([
+        juniorAPI.getCompanyInsights({ limit: 100 }),
+        juniorAPI.getStats(),
+        juniorAPI.getTrendingTopics(8),
+      ]);
+      setCompanies(companiesRes.data.data || []);
+      setStats(statsRes.data.data);
+      setTopics(topicsRes.data.data || []);
+    } catch (err) {
+      console.error('Failed to load junior data:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const openCompany = async (company) => {
+    setSelectedCompany(company);
+    setView('company');
+    setExpLoading(true);
+    try {
+      const res = await juniorAPI.getCompanyExperiences(company.company_name, { limit: 20 });
+      setExperiences(res.data.data || []);
+    } catch (err) {
+      console.error('Failed to load experiences:', err);
+    } finally {
+      setExpLoading(false);
+    }
+  };
+
+  const filteredCompanies = companies.filter(c =>
+    c.company_name?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  if (loading) return (
+    <div className="flex justify-center items-center h-64">
+      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600" />
+    </div>
+  );
+
+  // ---- COMPANY DETAIL VIEW ----
+  if (view === 'company' && selectedCompany) {
+    return (
+      <div className="max-w-4xl mx-auto">
+        <button
+          onClick={() => { setView('list'); setExperiences([]); setExpandedExp(null); }}
+          className="flex items-center gap-2 text-gray-500 hover:text-indigo-600 mb-6 transition-colors"
+        >
+          <ArrowBackIcon fontSize="small" />
+          Back to Companies
+        </button>
+
+        {/* Company Header */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-6">
+          <div className="flex items-center gap-4 mb-4">
+            <div className="w-14 h-14 rounded-xl bg-indigo-100 text-indigo-600 flex items-center justify-center text-2xl font-bold">
+              {selectedCompany.company_name?.[0]?.toUpperCase()}
+            </div>
+            <div>
+              <h2 className="text-2xl font-bold text-gray-900">{selectedCompany.company_name}</h2>
+              <p className="text-gray-500 text-sm">{selectedCompany.total_submissions} interview report(s)</p>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="bg-indigo-50 rounded-lg p-3 text-center">
+              <div className="text-xl font-bold text-indigo-700">{selectedCompany.total_submissions}</div>
+              <div className="text-xs text-gray-500 mt-1">Total Reports</div>
+            </div>
+            <div className="bg-green-50 rounded-lg p-3 text-center">
+              <div className="text-xl font-bold text-green-700">{selectedCompany.selection_rate ?? 0}%</div>
+              <div className="text-xs text-gray-500 mt-1">Selection Rate</div>
+            </div>
+            <div className="bg-yellow-50 rounded-lg p-3 text-center">
+              <div className="text-xl font-bold text-yellow-700">{selectedCompany.avg_confidence ? Number(selectedCompany.avg_confidence).toFixed(1) : 'N/A'}</div>
+              <div className="text-xs text-gray-500 mt-1">Avg. Confidence</div>
+            </div>
+            <div className="bg-purple-50 rounded-lg p-3 text-center">
+              <div className="text-xl font-bold text-purple-700">{selectedCompany.avg_ctc ? `₹${Number(selectedCompany.avg_ctc).toFixed(1)} LPA` : 'N/A'}</div>
+              <div className="text-xs text-gray-500 mt-1">Avg. CTC</div>
+            </div>
+          </div>
+        </div>
+
+        {/* Experience Cards */}
+        {expLoading ? (
+          <div className="flex justify-center py-12">
+            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-indigo-500" />
+          </div>
+        ) : experiences.length === 0 ? (
+          <div className="text-center py-12 text-gray-500 bg-white rounded-xl border border-dashed border-gray-200">
+            No approved experiences found for this company yet.
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {experiences.map((exp) => (
+              <div key={exp.id} className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+                <div
+                  className="p-5 cursor-pointer hover:bg-gray-50 transition-colors"
+                  onClick={() => setExpandedExp(expandedExp === exp.id ? null : exp.id)}
+                >
+                  <div className="flex flex-wrap justify-between items-start gap-3">
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-900">{exp.role_applied}</h3>
+                      <p className="text-sm text-gray-500 mt-1">by {exp.author}</p>
+                    </div>
+                    <div className="flex flex-wrap gap-2 items-center">
+                      <span className={`text-sm font-semibold ${resultColor[exp.result] || 'text-gray-600'}`}>
+                        {resultLabel[exp.result] || exp.result}
+                      </span>
+                      {exp.overall_difficulty && (
+                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${difficultyColor[exp.overall_difficulty] || 'bg-gray-100 text-gray-600'}`}>
+                          {exp.overall_difficulty}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap gap-4 text-xs text-gray-500 mt-3">
+                    {exp.confidence_level && (
+                      <span className="flex items-center gap-1"><StarIcon fontSize="inherit" /> Confidence: {exp.confidence_level}/10</span>
+                    )}
+                    {exp.ctc_offered && (
+                      <span className="flex items-center gap-1"><MoneyIcon fontSize="inherit" /> ₹{exp.ctc_offered} LPA</span>
+                    )}
+                    {exp.interview_duration && (
+                      <span className="flex items-center gap-1"><TimeIcon fontSize="inherit" /> {exp.interview_duration} min</span>
+                    )}
+                  </div>
+                </div>
+
+                {expandedExp === exp.id && (
+                  <div className="border-t border-gray-100 px-5 pb-5 pt-4 space-y-4">
+                    {exp.overall_feedback && (
+                      <div>
+                        <h4 className="font-semibold text-gray-800 text-sm mb-1">Overall Feedback</h4>
+                        <p className="text-gray-600 text-sm leading-relaxed">{exp.overall_feedback}</p>
+                      </div>
+                    )}
+                    {exp.rounds && exp.rounds.length > 0 && (
+                      <div>
+                        <h4 className="font-semibold text-gray-800 text-sm mb-2">Interview Rounds</h4>
+                        <div className="space-y-3">
+                          {exp.rounds.map((round) => {
+                            // Merge questions from questions table + inline JSONB
+                            const tableQuestions = round.questions || [];
+                            const jsonbQuestions = Array.isArray(round.questions_jsonb)
+                              ? round.questions_jsonb.filter(q => typeof q === 'object' && q.question_text)
+                              : (typeof round.questions_jsonb === 'string'
+                                ? [] // raw text fallback
+                                : []);
+                            // De-duplicate: prefer table questions, fall back to JSONB
+                            const allQuestions = tableQuestions.length > 0 ? tableQuestions : jsonbQuestions;
+
+                            return (
+                              <div key={round.round_number} className="bg-gray-50 rounded-lg p-4 space-y-3">
+                                {/* Round Header */}
+                                <div className="flex items-center justify-between">
+                                  <span className="font-semibold text-sm text-gray-800">
+                                    Round {round.round_number}: {round.round_type}
+                                  </span>
+                                  {round.difficulty_level && (
+                                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${difficultyColor[round.difficulty_level] || 'bg-gray-100 text-gray-600'}`}>
+                                      {round.difficulty_level}
+                                    </span>
+                                  )}
+                                </div>
+
+                                {round.duration_minutes && (
+                                  <p className="text-xs text-gray-500">⏱ {round.duration_minutes} minutes</p>
+                                )}
+
+                                {/* Topics */}
+                                {round.topics && round.topics.length > 0 && (
+                                  <div className="flex flex-wrap gap-1">
+                                    {round.topics.map((t, i) => (
+                                      <span key={i} className="bg-indigo-100 text-indigo-700 text-xs px-2 py-0.5 rounded-full">{t}</span>
+                                    ))}
+                                  </div>
+                                )}
+
+                                {/* Questions Asked */}
+                                {allQuestions.length > 0 && (
+                                  <div>
+                                    <p className="text-xs font-semibold text-gray-700 mb-2">❓ Questions Asked:</p>
+                                    <div className="space-y-2">
+                                      {allQuestions.map((q, qi) => (
+                                        <div key={qi} className="bg-white border border-gray-200 rounded-lg p-3">
+                                          <div className="flex items-start justify-between gap-2">
+                                            <p className="text-sm text-gray-800 font-medium leading-snug">{q.question_text}</p>
+                                            <div className="flex gap-1 flex-shrink-0">
+                                              {q.is_common && (
+                                                <span className="bg-yellow-100 text-yellow-700 text-xs px-1.5 py-0.5 rounded font-medium">Common</span>
+                                              )}
+                                              {q.difficulty && (
+                                                <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${difficultyColor[q.difficulty] || 'bg-gray-100 text-gray-600'}`}>
+                                                  {q.difficulty}
+                                                </span>
+                                              )}
+                                            </div>
+                                          </div>
+                                          {q.category && (
+                                            <p className="text-xs text-gray-500 mt-1">Category: {q.category}</p>
+                                          )}
+                                          {q.answer_provided && (
+                                            <details className="mt-2">
+                                              <summary className="text-xs text-indigo-600 cursor-pointer hover:text-indigo-800 font-medium">
+                                                View sample answer ▾
+                                              </summary>
+                                              <p className="text-xs text-gray-600 mt-1 leading-relaxed bg-indigo-50 rounded p-2">
+                                                {q.answer_provided}
+                                              </p>
+                                            </details>
+                                          )}
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+
+                                {/* Tips */}
+                                {round.tips_and_insights && (
+                                  <p className="text-xs text-gray-600 italic border-l-2 border-indigo-300 pl-2">💡 {round.tips_and_insights}</p>
+                                )}
+                              </div>
+                            );
+                          })}
+
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // ---- LIST VIEW ----
   return (
-    <div className="bg-white p-6 rounded-lg shadow-md">
-      <h2 className="text-2xl font-bold mb-4">Browse Companies</h2>
-      <p className="text-gray-600">Explore company profiles and interview patterns here.</p>
+    <div className="max-w-5xl mx-auto">
+      {/* Stats Banner */}
+      {stats && (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+          {[
+            { label: 'Companies', value: stats.total_companies, color: 'indigo' },
+            { label: 'Active Drives', value: stats.active_drives, color: 'blue' },
+            { label: 'Experiences', value: stats.total_experiences, color: 'purple' },
+            { label: 'Selections', value: stats.total_selections, color: 'green' },
+          ].map(({ label, value, color }) => (
+            <div key={label} className={`bg-${color}-50 rounded-xl p-4 text-center`}>
+              <div className={`text-2xl font-bold text-${color}-700`}>{value ?? '—'}</div>
+              <div className="text-xs text-gray-500 mt-1">{label}</div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div className="flex flex-col md:flex-row gap-6">
+        {/* Company List */}
+        <div className="flex-1">
+          <div className="flex items-center gap-3 mb-4">
+            <h2 className="text-xl font-bold text-gray-900">Companies</h2>
+            <span className="text-sm text-gray-400">({filteredCompanies.length} with reports)</span>
+          </div>
+
+          <input
+            type="text"
+            placeholder="Search companies..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full mb-4 px-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-indigo-400"
+          />
+
+          {filteredCompanies.length === 0 ? (
+            <div className="text-center py-12 text-gray-500 bg-white rounded-xl border border-dashed border-gray-200">
+              {companies.length === 0
+                ? 'No approved experiences yet. Check back after seniors submit their reports.'
+                : 'No companies match your search.'}
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {filteredCompanies.map((c) => (
+                <div
+                  key={c.company_name}
+                  onClick={() => openCompany(c)}
+                  className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 cursor-pointer hover:shadow-md hover:border-indigo-200 transition-all group"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center font-bold text-lg group-hover:bg-indigo-600 group-hover:text-white transition-colors">
+                      {c.company_name?.[0]?.toUpperCase()}
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-gray-900 group-hover:text-indigo-600 transition-colors">
+                        {c.company_name}
+                      </h3>
+                      <div className="flex gap-3 text-xs text-gray-500 mt-0.5">
+                        <span>{c.total_submissions} report(s)</span>
+                        {c.selection_rate != null && <span className="text-green-600">{c.selection_rate}% selected</span>}
+                      </div>
+                    </div>
+                    <div className="text-right text-xs text-gray-500">
+                      {c.avg_ctc ? <span className="font-medium text-gray-700">₹{Number(c.avg_ctc).toFixed(1)} LPA</span> : ''}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Trending Topics Sidebar */}
+        {topics.length > 0 && (
+          <div className="w-full md:w-64 flex-shrink-0">
+            <h3 className="text-lg font-bold text-gray-900 mb-3 flex items-center gap-2">
+              <TrendingIcon className="text-indigo-500" fontSize="small" />
+              Trending Topics
+            </h3>
+            <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
+              <div className="flex flex-wrap gap-2">
+                {topics.map((t, i) => (
+                  <span
+                    key={i}
+                    className="bg-indigo-50 text-indigo-700 text-xs px-3 py-1 rounded-full font-medium border border-indigo-100"
+                  >
+                    {t.topic}
+                    <span className="ml-1 text-indigo-400">×{t.frequency}</span>
+                  </span>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 };

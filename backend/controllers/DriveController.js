@@ -54,7 +54,7 @@ class DriveController {
    */
   static async createDrive(req, res, next) {
     try {
-      const drive = await DriveService.createDrive(req.body, req.userId);
+      const drive = await DriveService.createDrive(req.body, req.user.id);
 
       res.status(constants.HTTP_CREATED).json({
         success: true,

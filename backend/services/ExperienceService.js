@@ -21,18 +21,17 @@ class ExperienceService {
       // 1. Create Experience (Map snake_case req data to camelCase model params)
       const experience = await Experience.create({
         userId,
-        driveId: experienceData.drive_id,
+        driveId: experienceData.drive_id || null,
         companyName: experienceData.company_name,
         roleApplied: experienceData.role_applied,
         result: experienceData.result,
-        selected: experienceData.selected,
-        offerReceived: experienceData.offer_received,
-        ctcOffered: experienceData.ctc_offered,
+        offerReceived: experienceData.offer_received || false,
+        ctcOffered: experienceData.ctc_offered ? parseFloat(experienceData.ctc_offered) : null,
         isAnonymous: experienceData.is_anonymous || false,
-        interviewDuration: experienceData.interview_duration,
-        overallDifficulty: experienceData.overall_difficulty,
-        overallFeedback: experienceData.overall_feedback,
-        confidenceLevel: experienceData.confidence_level
+        interviewDuration: experienceData.interview_duration ? parseInt(experienceData.interview_duration) : null,
+        overallDifficulty: experienceData.overall_difficulty || 'medium',
+        overallFeedback: experienceData.overall_feedback || null,
+        confidenceLevel: experienceData.confidence_level ? parseInt(experienceData.confidence_level) : null
       }, client);
 
       // 2. Create Rounds & Questions
@@ -40,20 +39,20 @@ class ExperienceService {
         for (const roundData of experienceData.rounds) {
           const round = await Round.create({
             experienceId: experience.id,
-            roundNumber: roundData.round_number,
+            roundNumber: roundData.round_number ? parseInt(roundData.round_number) : null,
             roundType: roundData.round_type,
-            durationMinutes: roundData.duration_minutes,
-            result: roundData.result,
-            roundDate: roundData.round_date,
-            topics: roundData.topics,
-            questions: roundData.questions, // Just for JSON storage if model uses it
-            difficultyLevel: roundData.difficulty_level,
-            problemStatement: roundData.problem_statement,
-            approachUsed: roundData.approach_used,
-            codeSnippet: roundData.code_snippet,
-            tipsAndInsights: roundData.tips_and_insights,
-            interviewerFeedback: roundData.interviewer_feedback,
-            skillsTested: roundData.skills_tested
+            durationMinutes: roundData.duration_minutes ? parseInt(roundData.duration_minutes) : null,
+            result: roundData.result || null,
+            roundDate: roundData.round_date || null,
+            topics: roundData.topics || [],
+            questions: roundData.questions || [],
+            difficultyLevel: roundData.difficulty_level || 'medium',
+            problemStatement: roundData.problem_statement || null,
+            approachUsed: roundData.approach_used || null,
+            codeSnippet: roundData.code_snippet || null,
+            tipsAndInsights: roundData.tips_and_insights || null,
+            interviewerFeedback: roundData.interviewer_feedback || null,
+            skillsTested: roundData.skills_tested || []
           }, client);
 
           if (roundData.questions_list && Array.isArray(roundData.questions_list)) {
@@ -95,11 +94,54 @@ class ExperienceService {
   }
 
   /**
-   * Get experience by ID
+   * Get experience by ID with full rounds + questions
    */
   static async getExperienceById(id) {
     try {
-      const experience = await Experience.findById(id);
+      const query = `
+        SELECT
+          e.id, e.user_id, e.drive_id, e.company_name, e.role_applied, e.result, e.selected,
+          e.offer_received, e.ctc_offered, e.is_anonymous, e.approval_status,
+          e.interview_duration, e.overall_difficulty, e.overall_feedback, e.confidence_level,
+          e.admin_comments, e.rejection_reason,
+          e.submitted_at, e.approved_at, e.created_at,
+          (
+            SELECT json_agg(round_data ORDER BY (round_data->>'round_number')::int)
+            FROM (
+              SELECT json_build_object(
+                'id', r.id,
+                'round_number', r.round_number,
+                'round_type', r.round_type,
+                'difficulty_level', r.difficulty_level,
+                'duration_minutes', r.duration_minutes,
+                'result', r.result,
+                'topics', r.topics,
+                'skills_tested', r.skills_tested,
+                'tips_and_insights', r.tips_and_insights,
+                'interviewer_feedback', r.interviewer_feedback,
+                'approach_used', r.approach_used,
+                'questions_jsonb', r.questions,
+                'questions', (
+                  SELECT json_agg(json_build_object(
+                    'id', q.id,
+                    'question_text', q.question_text,
+                    'category', q.category,
+                    'difficulty', q.difficulty,
+                    'answer_provided', q.answer_provided,
+                    'is_common', q.is_common
+                  ) ORDER BY q.id)
+                  FROM questions q WHERE q.round_id = r.id
+                )
+              ) AS round_data
+              FROM rounds r WHERE r.experience_id = e.id
+            ) rd
+          ) AS rounds
+        FROM experiences e
+        WHERE e.id = $1
+      `;
+      const result = await pool.query(query, [id]);
+      const experience = result.rows[0] || null;
+
       if (!experience) {
         throw new AppError(
           constants.ERROR_NOT_FOUND,
@@ -107,13 +149,13 @@ class ExperienceService {
           'EXPERIENCE_NOT_FOUND'
         );
       }
-
       return experience;
     } catch (error) {
       if (error instanceof AppError) throw error;
       throw new Error(`Get experience error: ${error.message}`);
     }
   }
+
 
   /**
    * Update experience (Student only - own submissions)
@@ -168,7 +210,7 @@ class ExperienceService {
   /**
    * Approve submission (Admin only)
    */
-  static async approveSubmission(experienceId) {
+  static async approveSubmission(experienceId, approvedBy, comment) {
     try {
       const experience = await Experience.findById(experienceId);
       if (!experience) {
@@ -179,7 +221,15 @@ class ExperienceService {
         );
       }
 
-      return await Experience.updateApprovalStatus(experienceId, 'accepted');
+      if (experience.approval_status !== 'pending') {
+        throw new AppError(
+          `Submission is already ${experience.approval_status}`,
+          400,
+          'ALREADY_PROCESSED'
+        );
+      }
+
+      return await Experience.updateApprovalStatus(experienceId, 'accepted', approvedBy, comment);
     } catch (error) {
       if (error instanceof AppError) throw error;
       throw new Error(`Approve submission error: ${error.message}`);
@@ -189,7 +239,7 @@ class ExperienceService {
   /**
    * Reject submission (Admin only)
    */
-  static async rejectSubmission(experienceId) {
+  static async rejectSubmission(experienceId, approvedBy, reason) {
     try {
       const experience = await Experience.findById(experienceId);
       if (!experience) {
@@ -200,7 +250,15 @@ class ExperienceService {
         );
       }
 
-      return await Experience.updateApprovalStatus(experienceId, 'rejected');
+      if (experience.approval_status !== 'pending') {
+        throw new AppError(
+          `Submission is already ${experience.approval_status}`,
+          400,
+          'ALREADY_PROCESSED'
+        );
+      }
+
+      return await Experience.updateApprovalStatus(experienceId, 'rejected', approvedBy, reason);
     } catch (error) {
       if (error instanceof AppError) throw error;
       throw new Error(`Reject submission error: ${error.message}`);

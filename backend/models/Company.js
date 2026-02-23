@@ -7,7 +7,7 @@ class Company {
   static async findById(id) {
     try {
       const query = `
-        SELECT id, name, description, logo_url, website, headquarters, industry, 
+        SELECT id, name, description, website, headquarters, industry, 
                company_size, founded_year, total_employees, is_active, created_at, updated_at
         FROM companies WHERE id = $1
       `;
@@ -31,17 +31,17 @@ class Company {
   static async create(companyData) {
     try {
       const {
-        name, description, logo_url, website, headquarters, industry, company_size, founded_year, total_employees,
+        name, description, website, headquarters, industry, company_size, founded_year, total_employees,
       } = companyData;
 
       const query = `
-        INSERT INTO companies (name, description, logo_url, website, headquarters, industry, company_size, founded_year, total_employees, created_at, updated_at)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW(), NOW())
+        INSERT INTO companies (name, description, website, headquarters, industry, company_size, founded_year, total_employees, created_at, updated_at)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW())
         RETURNING id, name, industry, created_at
       `;
 
       const result = await pool.query(query, [
-        name, description || null, logo_url || null, website || null, headquarters || null,
+        name, description || null, website || null, headquarters || null,
         industry || null, company_size || null, founded_year || null, total_employees || null,
       ]);
 
@@ -53,7 +53,7 @@ class Company {
 
   static async update(id, updates) {
     try {
-      const allowedFields = ['name', 'description', 'logo_url', 'website', 'headquarters', 'industry', 'company_size', 'founded_year', 'total_employees'];
+      const allowedFields = ['name', 'description', 'website', 'headquarters', 'industry', 'company_size', 'founded_year', 'total_employees'];
       const updateKeys = Object.keys(updates).filter((key) => allowedFields.includes(key));
 
       if (updateKeys.length === 0) return this.findById(id);

@@ -12,7 +12,7 @@ class ExperienceController {
    */
   static async submitExperience(req, res, next) {
     try {
-      const experience = await ExperienceService.submitExperience(req.userId, req.body);
+      const experience = await ExperienceService.submitExperience(req.user.id, req.body);
 
       res.status(constants.HTTP_CREATED).json({
         success: true,
@@ -33,7 +33,7 @@ class ExperienceController {
       const { page = 1, limit = 20 } = req.query;
       const { limit: limitNum, offset } = getPaginationParams(page, limit);
 
-      const result = await ExperienceService.getUserExperiences(req.userId, limitNum, offset);
+      const result = await ExperienceService.getUserExperiences(req.user.id, limitNum, offset);
 
       res.status(constants.HTTP_OK).json({
         success: true,
@@ -67,7 +67,7 @@ class ExperienceController {
    */
   static async updateExperience(req, res, next) {
     try {
-      const experience = await ExperienceService.updateExperience(req.userId, req.params.id, req.body);
+      const experience = await ExperienceService.updateExperience(req.user.id, req.params.id, req.body);
 
       res.status(constants.HTTP_OK).json({
         success: true,
@@ -107,7 +107,7 @@ class ExperienceController {
     try {
       const result = await ExperienceService.approveSubmission(
         req.params.id,
-        req.userId,
+        req.user.id,
         req.body.comment
       );
 
@@ -129,7 +129,7 @@ class ExperienceController {
     try {
       const result = await ExperienceService.rejectSubmission(
         req.params.id,
-        req.userId,
+        req.user.id,
         req.body.reason
       );
 

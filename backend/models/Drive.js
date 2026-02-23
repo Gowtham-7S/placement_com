@@ -7,10 +7,10 @@ class Drive {
   static async findById(id) {
     try {
       const query = `
-        SELECT d.id, d.company_id, c.name as company_name, d.role_name, d.ctc_min, d.ctc_max, 
+        SELECT d.id, d.company_id, c.name as company_name, d.role_name, d.ctc,
                d.interview_date, d.registration_deadline, d.total_positions, d.filled_positions,
                d.round_count, d.drive_status, d.requirements, d.eligible_batches, d.location, 
-               d.mode, d.drive_details, d.created_at
+               d.mode, d.created_at
         FROM drives d
         JOIN companies c ON d.company_id = c.id
         WHERE d.id = $1
@@ -25,24 +25,22 @@ class Drive {
   static async create(driveData) {
     try {
       const {
-        company_id, role_name, ctc_min, ctc_max, interview_date, registration_deadline,
-        total_positions, round_count, requirements, eligible_batches, location, mode,
-        created_by
+        company_id, role_name, ctc, interview_date, registration_deadline,
+        total_positions, round_count, requirements, eligible_batches, location, mode
       } = driveData;
 
       const query = `
-        INSERT INTO drives (company_id, role_name, ctc_min, ctc_max, interview_date, 
+        INSERT INTO drives (company_id, role_name, ctc, interview_date, 
                           registration_deadline, total_positions, round_count, 
-                          requirements, eligible_batches, location, mode, created_by, created_at, updated_at)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, NOW(), NOW())
+                          requirements, eligible_batches, location, mode, created_at, updated_at)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW(), NOW())
         RETURNING id, company_id, role_name, interview_date, drive_status
       `;
 
       const result = await pool.query(query, [
-        company_id, role_name, ctc_min || null, ctc_max || null, interview_date,
+        company_id, role_name, ctc || null, interview_date,
         registration_deadline || null, total_positions || null, round_count || null,
-        requirements || null, eligible_batches || null, location || null, mode || 'online',
-        created_by || null
+        requirements || null, eligible_batches || null, location || null, mode || 'online'
       ]);
 
       return result.rows[0];
@@ -125,7 +123,7 @@ class Drive {
   static async getAll(limit = 20, offset = 0, filters = {}) {
     try {
       let query = `
-        SELECT d.id, d.company_id, c.name as company_name, d.role_name, d.ctc_min, d.ctc_max, 
+        SELECT d.id, d.company_id, c.name as company_name, d.role_name, d.ctc,
                d.interview_date, d.drive_status, d.filled_positions, d.total_positions, d.created_at
         FROM drives d
         JOIN companies c ON d.company_id = c.id

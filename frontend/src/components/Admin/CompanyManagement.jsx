@@ -2,9 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { companyAPI } from '../../api';
 import {
   Dialog, DialogTitle, DialogContent, DialogActions, TextField, Button,
-  MenuItem, IconButton, Menu
+  MenuItem, Menu
 } from '@mui/material';
-import { MoreVert as MoreVertIcon, Add as AddIcon, Search as SearchIcon, FilterList as FilterIcon, LocationOn as LocationIcon, Business as BusinessIcon } from '@mui/icons-material';
+import { MoreVert as MoreVertIcon, Add as AddIcon, Search as SearchIcon, LocationOn as LocationIcon, Business as BusinessIcon } from '@mui/icons-material';
 
 const CompanyManagement = () => {
   const [companies, setCompanies] = useState([]);
@@ -51,15 +51,21 @@ const CompanyManagement = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
+      // Strip empty strings so optional fields pass backend validation
+      const payload = Object.fromEntries(
+        Object.entries(formData).filter(([_, v]) => v !== '' && v !== null)
+      );
       if (editingId) {
-        await companyAPI.update(editingId, formData);
+        await companyAPI.update(editingId, payload);
       } else {
-        await companyAPI.create(formData);
+        await companyAPI.create(payload);
       }
       setModalOpen(false);
       fetchCompanies();
     } catch (error) {
-      console.error('Operation failed');
+      const msg = error.response?.data?.errors?.map(e => e.message).join(', ') || 'Operation failed';
+      alert(msg);
+      console.error('Operation failed', error.response?.data);
     }
   };
 
@@ -89,18 +95,8 @@ const CompanyManagement = () => {
     const { name, value } = e.target;
     setFormData((prev) => ({
       ...prev,
-      [name]: name === 'founded_year' ? parseInt(value) : value,
+      [name]: name === 'founded_year' && value !== '' ? parseInt(value) : value,
     }));
-  };
-
-  // Mock data generators for UI demo
-  const getMockPackage = (id) => {
-    const packages = ['₹45 LPA', '₹42 LPA', '₹38 LPA', '₹28 LPA', '₹12 LPA', '₹7 LPA'];
-    return packages[id % packages.length] || '₹10 LPA';
-  };
-
-  const getMockDrives = (id) => {
-    return (id % 8) + 2;
   };
 
   const filteredCompanies = companies.filter(c =>
@@ -182,16 +178,18 @@ const CompanyManagement = () => {
                   <LocationIcon fontSize="inherit" className="text-gray-400" />
                   {company.headquarters || 'Remote'}
                 </div>
-                <div className="flex items-center gap-1">
-                  <BusinessIcon fontSize="inherit" className="text-gray-400" />
-                  {getMockDrives(company.id)} drives
-                </div>
+                {company.company_size && (
+                  <div className="flex items-center gap-1">
+                    <BusinessIcon fontSize="inherit" className="text-gray-400" />
+                    {company.company_size}
+                  </div>
+                )}
               </div>
 
               {/* Footer / Stats */}
               <div className="pt-4 border-t border-gray-50 flex items-center justify-between">
-                <span className="text-xs text-gray-400 font-medium">Avg Package</span>
-                <span className="text-sm font-bold text-gray-900">{getMockPackage(company.id)}</span>
+                <span className="text-xs text-gray-400 font-medium">Industry</span>
+                <span className="text-sm font-semibold text-gray-700 truncate max-w-[120px]">{company.industry || 'N/A'}</span>
               </div>
             </div>
           </div>

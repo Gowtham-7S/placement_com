@@ -1,110 +1,171 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
-  Check as CheckIcon, Close as CloseIcon, AccessTime as AccessTimeIcon
+  Check as CheckIcon, Close as CloseIcon, AccessTime as AccessTimeIcon,
+  Refresh as RefreshIcon
 } from '@mui/icons-material';
+import { approvalAPI } from '../../api';
 
 const PendingApprovals = () => {
-  // Mock data matching the user's image
-  const [approvals, setApprovals] = useState([
-    {
-      id: 1,
-      company: 'Microsoft',
-      role: 'SDE-1',
-      candidate: 'Anita Patel',
-      date: '2026-02-04',
-      rounds: '3 rounds',
-      difficulty: 'Medium',
-      status: 'pending'
-    },
-    {
-      id: 2,
-      company: 'Adobe',
-      role: 'MTS',
-      candidate: 'Deepak Verma',
-      date: '2026-02-06',
-      rounds: '4 rounds',
-      difficulty: 'Hard',
-      status: 'pending'
-    },
-    {
-      id: 3,
-      company: 'Salesforce',
-      role: 'SDE Intern',
-      candidate: 'Kavya Nair',
-      date: '2026-02-07',
-      rounds: '3 rounds',
-      difficulty: 'Medium',
-      status: 'pending'
+  const [approvals, setApprovals] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [comments, setComments] = useState({}); // { [id]: 'comment text' }
+  const [actionLoading, setActionLoading] = useState({}); // { [id]: 'approve'|'reject'|null }
+
+  useEffect(() => {
+    fetchPendingApprovals();
+  }, []);
+
+  const fetchPendingApprovals = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await approvalAPI.getPending({ limit: 50 });
+      setApprovals(response.data.data || []);
+    } catch (err) {
+      console.error('Failed to load pending approvals:', err);
+      setError('Failed to load pending approvals. Please try again.');
+    } finally {
+      setLoading(false);
     }
-  ]);
-
-  const handleApprove = (id) => {
-    // In a real app, this would call the API
-    setApprovals(approvals.filter(a => a.id !== id));
-    // console.log(`Approved experience ${id}`);
   };
 
-  const handleReject = (id) => {
-    // In a real app, this would call the API
-    setApprovals(approvals.filter(a => a.id !== id));
-    // console.log(`Rejected experience ${id}`);
+  const handleApprove = async (id) => {
+    setActionLoading(prev => ({ ...prev, [id]: 'approve' }));
+    try {
+      await approvalAPI.approve(id, { comment: comments[id] || null });
+      setApprovals(prev => prev.filter(a => a.id !== id));
+    } catch (err) {
+      console.error('Failed to approve submission:', err);
+      alert('Failed to approve. Please try again.');
+    } finally {
+      setActionLoading(prev => ({ ...prev, [id]: null }));
+    }
   };
+
+  const handleReject = async (id) => {
+    setActionLoading(prev => ({ ...prev, [id]: 'reject' }));
+    try {
+      await approvalAPI.reject(id, { reason: comments[id] || null });
+      setApprovals(prev => prev.filter(a => a.id !== id));
+    } catch (err) {
+      console.error('Failed to reject submission:', err);
+      alert('Failed to reject. Please try again.');
+    } finally {
+      setActionLoading(prev => ({ ...prev, [id]: null }));
+    }
+  };
+
+  const handleCommentChange = (id, value) => {
+    setComments(prev => ({ ...prev, [id]: value }));
+  };
+
+  if (loading) return (
+    <div className="flex justify-center items-center h-64">
+      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+    </div>
+  );
+
+  if (error) return (
+    <div className="max-w-5xl mx-auto">
+      <div className="bg-red-50 border border-red-200 rounded-xl p-6 text-center">
+        <p className="text-red-600 font-medium">{error}</p>
+        <button
+          onClick={fetchPendingApprovals}
+          className="mt-4 px-4 py-2 bg-red-600 text-white rounded-lg text-sm hover:bg-red-700 transition-colors inline-flex items-center gap-2"
+        >
+          <RefreshIcon fontSize="small" />
+          Retry
+        </button>
+      </div>
+    </div>
+  );
 
   return (
     <div className="max-w-5xl mx-auto min-h-screen">
       {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">Pending Approvals</h1>
-        <p className="text-gray-500 mt-1">{approvals.length} experience(s) awaiting review</p>
+      <div className="flex items-center justify-between mb-8">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Pending Approvals</h1>
+          <p className="text-gray-500 mt-1">{approvals.length} experience(s) awaiting review</p>
+        </div>
+        <button
+          onClick={fetchPendingApprovals}
+          className="text-gray-400 hover:text-indigo-600 transition-colors p-2 rounded-lg hover:bg-gray-50"
+          title="Refresh"
+        >
+          <RefreshIcon />
+        </button>
       </div>
 
       {/* Approval List */}
       <div className="space-y-6">
-        {approvals.map((item) => (
-          <div key={item.id} className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
-            <div className="flex justify-between items-start mb-4">
-              <div>
-                <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
-                  {item.company} <span className="text-gray-400 font-light">—</span> {item.role}
-                </h3>
-                <p className="text-sm text-gray-500 mt-1">
-                  by <span className="font-medium text-gray-700">{item.candidate}</span> • {item.date} • {item.rounds} • {item.difficulty}
-                </p>
+        {approvals.map((item) => {
+          const isActing = actionLoading[item.id];
+          return (
+            <div key={item.id} className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
+              <div className="flex justify-between items-start mb-4">
+                <div>
+                  <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                    {item.company_name}
+                    <span className="text-gray-400 font-light">—</span>
+                    {item.role_applied}
+                  </h3>
+                  <p className="text-sm text-gray-500 mt-1">
+                    {item.first_name && item.last_name
+                      ? <>by <span className="font-medium text-gray-700">{item.first_name} {item.last_name}</span> • </>
+                      : null
+                    }
+                    Submitted: {item.submitted_at ? new Date(item.submitted_at).toLocaleDateString() : 'N/A'}
+                    {item.overall_difficulty && <> • Difficulty: {item.overall_difficulty}</>}
+                  </p>
+                </div>
+                <span className="bg-orange-100 text-orange-600 px-3 py-1 rounded-full text-xs font-medium border border-orange-200 flex-shrink-0">
+                  Pending
+                </span>
               </div>
-              <span className="bg-orange-100 text-orange-600 px-3 py-1 rounded-full text-xs font-medium border border-orange-200">
-                Pending
-              </span>
-            </div>
 
-            {/* Actions Row */}
-            <div className="flex gap-4 items-center mt-6">
-              <input
-                type="text"
-                placeholder="Add a comment (optional)..."
-                className="flex-1 bg-gray-50 border border-gray-200 rounded-lg px-4 py-2.5 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all placeholder-gray-400"
-              />
-              <div className="flex gap-2">
-                <button
-                  onClick={() => handleApprove(item.id)}
-                  className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition-colors"
-                >
-                  <CheckIcon fontSize="small" />
-                  Approve
-                </button>
-                <button
-                  onClick={() => handleReject(item.id)}
-                  className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition-colors"
-                >
-                  <CloseIcon fontSize="small" />
-                  Reject
-                </button>
+              {/* Comment + Actions Row */}
+              <div className="flex gap-3 items-center mt-6 flex-col sm:flex-row">
+                <input
+                  type="text"
+                  placeholder="Add a comment (optional)..."
+                  className="flex-1 bg-gray-50 border border-gray-200 rounded-lg px-4 py-2.5 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all placeholder-gray-400 w-full"
+                  value={comments[item.id] || ''}
+                  onChange={(e) => handleCommentChange(item.id, e.target.value)}
+                  disabled={!!isActing}
+                />
+                <div className="flex gap-2 flex-shrink-0">
+                  <button
+                    onClick={() => handleApprove(item.id)}
+                    disabled={!!isActing}
+                    className="bg-green-600 hover:bg-green-700 disabled:opacity-60 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition-colors"
+                  >
+                    {isActing === 'approve'
+                      ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      : <CheckIcon fontSize="small" />
+                    }
+                    Approve
+                  </button>
+                  <button
+                    onClick={() => handleReject(item.id)}
+                    disabled={!!isActing}
+                    className="bg-red-500 hover:bg-red-600 disabled:opacity-60 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition-colors"
+                  >
+                    {isActing === 'reject'
+                      ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      : <CloseIcon fontSize="small" />
+                    }
+                    Reject
+                  </button>
+                </div>
               </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
 
-        {approvals.length === 0 && (
-          <div className="text-center py-16 bg-white rounded-xl border border-gray-50 border-dashed">
+        {approvals.length === 0 && !loading && (
+          <div className="text-center py-16 bg-white rounded-xl border border-dashed border-gray-200">
             <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4 text-gray-400">
               <AccessTimeIcon fontSize="large" />
             </div>

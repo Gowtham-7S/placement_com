@@ -1,6 +1,6 @@
 const jwt = require('jsonwebtoken');
 
-exports.protect = async (req, res, next) => {
+const protect = async (req, res, next) => {
   let token;
 
   if (
@@ -23,7 +23,7 @@ exports.protect = async (req, res, next) => {
   }
 };
 
-exports.authorize = (...roles) => {
+const authorize = (...roles) => {
   return (req, res, next) => {
     if (!roles.includes(req.user.role)) {
       return res.status(403).json({
@@ -34,3 +34,10 @@ exports.authorize = (...roles) => {
     next();
   };
 };
+
+// Default export so `router.use(authMiddleware)` works directly
+module.exports = protect;
+
+// Named exports for destructured imports
+module.exports.protect = protect;
+module.exports.authorize = authorize;

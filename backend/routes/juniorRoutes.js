@@ -1,4 +1,5 @@
 const express = require('express');
+const JuniorController = require('../controllers/JuniorController');
 const authMiddleware = require('../middlewares/authMiddleware');
 const roleMiddleware = require('../middlewares/roleMiddleware');
 
@@ -14,31 +15,18 @@ router.use(roleMiddleware('junior'));
 
 // ========== COMPANY INSIGHTS ==========
 
-// Get all companies (public data)
-// router.get('/companies', JuniorController.getAllCompanies);
+// Get all companies with aggregated experience data
+router.get('/companies', JuniorController.getCompanyInsights);
 
-// Get company details and insights
-// router.get('/companies/:id/insights', JuniorController.getCompanyInsights);
-
-// ========== INTERVIEW PATTERNS ==========
-
-// Get interview patterns for a company
-// router.get('/companies/:id/patterns', JuniorController.getInterviewPatterns);
-
-// ========== PREPARATION ROADMAPS ==========
-
-// Get AI-generated preparation roadmap
-// router.get('/roadmap', JuniorController.generateRoadmap);
+// Get approved experiences for a specific company
+router.get('/companies/:name/experiences', JuniorController.getCompanyExperiences);
 
 // ========== STATISTICS & TRENDS ==========
 
-// Get overall placement statistics
-// router.get('/statistics', JuniorController.getStatistics);
+// Get overall public placement statistics
+router.get('/stats', JuniorController.getPublicStats);
 
-// Get topic trends
-// router.get('/trends/topics', JuniorController.getTopicTrends);
-
-// Get skill requirements
-// router.get('/trends/skills', JuniorController.getSkillTrends);
+// Get trending interview topics
+router.get('/topics', JuniorController.getTrendingTopics);
 
 module.exports = router;

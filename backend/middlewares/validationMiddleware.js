@@ -82,12 +82,12 @@ const validators = {
       .withMessage('Company name is required')
       .isLength({ min: 2 })
       .withMessage('Company name must be at least 2 characters'),
-    body('description').optional().trim(),
-    body('logo_url').optional().isURL().withMessage('Invalid URL format'),
-    body('website').optional().isURL().withMessage('Invalid URL format'),
-    body('industry').optional().trim(),
-    body('company_size').optional().trim(),
-    body('founded_year').optional().isInt({ min: 1800, max: 2100 }).withMessage('Invalid year'),
+    body('description').optional({ checkFalsy: true }).trim(),
+    body('website').optional({ checkFalsy: true }).isURL({ protocols: ['http', 'https'], require_protocol: true }).withMessage('Invalid URL format (must start with http:// or https://)'),
+    body('industry').optional({ checkFalsy: true }).trim(),
+    body('headquarters').optional({ checkFalsy: true }).trim(),
+    body('company_size').optional({ checkFalsy: true }).trim(),
+    body('founded_year').optional({ checkFalsy: true }).isInt({ min: 1800, max: 2100 }).withMessage('Invalid year'),
   ],
 
   // Drive validation
@@ -99,17 +99,18 @@ const validators = {
       .withMessage('Role name is required')
       .isLength({ min: 2 })
       .withMessage('Role name must be at least 2 characters'),
-    body('ctc_min').optional().isFloat({ min: 0 }).withMessage('CTC min must be positive'),
-    body('ctc_max').optional().isFloat({ min: 0 }).withMessage('CTC max must be positive'),
-    body('interview_date').isISO8601().withMessage('Invalid interview date format'),
-    body('mode')
+    body('ctc_min').optional({ checkFalsy: true }).isFloat({ min: 0 }).withMessage('CTC min must be positive'),
+    body('ctc_max').optional({ checkFalsy: true }).isFloat({ min: 0 }).withMessage('CTC max must be positive'),
+    body('ctc').optional({ checkFalsy: true }).isFloat({ min: 0 }).withMessage('CTC must be positive'),
+    body('interview_date').notEmpty().withMessage('Interview date is required').isISO8601().withMessage('Invalid interview date format'),
+    body('mode').optional({ checkFalsy: true })
       .isIn(constants.INTERVIEW_MODES)
       .withMessage(`Mode must be one of: ${constants.INTERVIEW_MODES.join(', ')}`),
   ],
 
   // Experience validation
   experienceValidation: [
-    body('drive_id').isInt().withMessage('Drive ID must be an integer'),
+    body('drive_id').optional({ nullable: true }).isInt().withMessage('Drive ID must be an integer'),
     body('company_name')
       .trim()
       .notEmpty()
@@ -119,10 +120,13 @@ const validators = {
       .notEmpty()
       .withMessage('Role applied is required'),
     body('result')
+      .optional()
       .isIn(constants.INTERVIEW_RESULTS)
       .withMessage(`Result must be one of: ${constants.INTERVIEW_RESULTS.join(', ')}`),
     body('selected').optional().isBoolean().withMessage('Selected must be boolean'),
     body('offer_received').optional().isBoolean().withMessage('Offer received must be boolean'),
+    body('confidence_level').optional().isInt({ min: 1, max: 10 }).withMessage('Confidence level must be between 1 and 10'),
+    body('interview_duration').optional().isInt({ min: 1 }).withMessage('Interview duration must be a positive integer'),
   ],
 
   // ID parameter validation

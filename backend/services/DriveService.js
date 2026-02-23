@@ -54,10 +54,9 @@ class DriveService {
         );
       }
 
-      // Add creator ID to data
-      const data = { ...driveData, created_by: userId };
-      return await Drive.create(data);
+      return await Drive.create(driveData);
     } catch (error) {
+      if (error instanceof AppError) throw error;
       throw new Error(`Create drive error: ${error.message}`);
     }
   }

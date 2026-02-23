@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { experienceAPI } from '../../api';
 
 const SubmitExperience = () => {
   const [step, setStep] = useState(1);
@@ -86,26 +87,18 @@ const SubmitExperience = () => {
     setError('');
 
     try {
-      // In a real app, use axios instance
-      const token = localStorage.getItem('token'); // Assuming auth token is stored
-      const response = await fetch('/api/student/experience', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(formData)
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || 'Submission failed');
-      }
-
+      // Sanitize drive_id — send null if not set (backend requires int or null)
+      const payload = {
+        ...formData,
+        drive_id: formData.drive_id ? parseInt(formData.drive_id) : null,
+        ctc_offered: formData.ctc_offered ? parseFloat(formData.ctc_offered) : null,
+        confidence_level: formData.confidence_level ? parseInt(formData.confidence_level) : null,
+      };
+      await experienceAPI.submit(payload);
       setSuccess(true);
     } catch (err) {
-      setError(err.message);
+      const msg = err.response?.data?.message || err.message || 'Submission failed';
+      setError(msg);
     } finally {
       setLoading(false);
     }
