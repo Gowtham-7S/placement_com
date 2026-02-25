@@ -125,7 +125,7 @@ const AdminAnalytics = () => {
                     <p className="text-xs text-gray-500">{act.company_name} · {act.role_applied}</p>
                   </div>
                 </div>
-                <StatusBadge status={act.status || 'approved'} />
+                <StatusBadge status={act.status || 'pending'} />
               </div>
             ))}
           </div>

@@ -51,7 +51,7 @@ class AnalyticsService {
     static async getRecentActivity() {
         try {
             const query = `
-        SELECT e.id, e.company_name, e.role_applied, e.submitted_at, u.first_name, u.last_name
+        SELECT e.id, e.company_name, e.role_applied, e.submitted_at, e.approval_status as status, u.first_name, u.last_name
         FROM experiences e
         JOIN users u ON e.user_id = u.id
         ORDER BY e.submitted_at DESC
