@@ -92,6 +92,7 @@ const SubmitExperience = () => {
         ...formData,
         drive_id: formData.drive_id ? parseInt(formData.drive_id) : null,
         ctc_offered: formData.ctc_offered ? parseFloat(formData.ctc_offered) : null,
+        interview_duration: formData.interview_duration ? parseInt(formData.interview_duration) : null,
         confidence_level: formData.confidence_level ? parseInt(formData.confidence_level) : null,
       };
       await experienceAPI.submit(payload);

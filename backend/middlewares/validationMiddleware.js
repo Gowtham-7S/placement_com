@@ -125,8 +125,8 @@ const validators = {
       .withMessage(`Result must be one of: ${constants.INTERVIEW_RESULTS.join(', ')}`),
     body('selected').optional().isBoolean().withMessage('Selected must be boolean'),
     body('offer_received').optional().isBoolean().withMessage('Offer received must be boolean'),
-    body('confidence_level').optional().isInt({ min: 1, max: 10 }).withMessage('Confidence level must be between 1 and 10'),
-    body('interview_duration').optional().isInt({ min: 1 }).withMessage('Interview duration must be a positive integer'),
+    body('confidence_level').optional({ nullable: true }).isInt({ min: 1, max: 10 }).withMessage('Confidence level must be between 1 and 10'),
+    body('interview_duration').optional({ nullable: true }).isInt({ min: 1 }).withMessage('Interview duration must be a positive integer'),
   ],
 
   // ID parameter validation
