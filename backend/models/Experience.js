@@ -91,6 +91,58 @@ class Experience {
     }
   }
 
+  static async getAll(limit = 20, offset = 0, filters = {}) {
+    try {
+      let whereConditions = [];
+      let queryParams = [];
+      let paramIndex = 1;
+
+      // Add filters if provided
+      if (filters.status) {
+        whereConditions.push(`LOWER(approval_status) = LOWER($${paramIndex})`);
+        queryParams.push(filters.status);
+        paramIndex++;
+      }
+
+      if (filters.companyName) {
+        whereConditions.push(`LOWER(company_name) LIKE LOWER($${paramIndex})`);
+        queryParams.push(`%${filters.companyName}%`);
+        paramIndex++;
+      }
+
+      if (filters.result) {
+        whereConditions.push(`LOWER(result) = LOWER($${paramIndex})`);
+        queryParams.push(filters.result);
+        paramIndex++;
+      }
+
+      const whereClause = whereConditions.length > 0 ? 'WHERE ' + whereConditions.join(' AND ') : '';
+
+      const countQuery = `SELECT COUNT(*) as total FROM experiences ${whereClause}`;
+      const dataQuery = `
+        SELECT 
+          e.id, e.user_id, e.company_name, e.role_applied, e.result, e.approval_status, 
+          e.submitted_at, e.offer_received, e.ctc_offered, e.is_anonymous, 
+          e.interview_duration, e.overall_difficulty
+        FROM experiences e 
+        ${whereClause}
+        ORDER BY e.submitted_at DESC LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
+      `;
+
+      queryParams.push(limit, offset);
+
+      const countResult = await pool.query(countQuery, queryParams.slice(0, -2));
+      const dataResult = await pool.query(dataQuery, queryParams);
+
+      return {
+        total: parseInt(countResult.rows[0].total),
+        data: dataResult.rows,
+      };
+    } catch (error) {
+      throw new Error(`Error fetching all experiences: ${error.message}`);
+    }
+  }
+
   static async updateApprovalStatus(id, status, approvedBy, comment = null) {
     try {
       const query = `

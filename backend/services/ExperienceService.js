@@ -208,6 +208,17 @@ class ExperienceService {
   }
 
   /**
+   * Get all experiences (Admin only)
+   */
+  static async getAllExperiences(limit = 20, offset = 0, filters = {}) {
+    try {
+      return await Experience.getAll(limit, offset, filters);
+    } catch (error) {
+      throw new Error(`Get all experiences error: ${error.message}`);
+    }
+  }
+
+  /**
    * Approve submission (Admin only)
    */
   static async approveSubmission(experienceId, approvedBy, comment) {

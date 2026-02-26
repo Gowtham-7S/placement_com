@@ -47,6 +47,12 @@ export const approvalAPI = {
   reject: (id, data) => axiosInstance.post(`/admin/submissions/${id}/reject`, data),
 };
 
+// Admin Experiences APIs
+export const adminExperienceAPI = {
+  getAll: (params) => axiosInstance.get('/admin/experiences', { params }),
+  getById: (id) => axiosInstance.get(`/admin/experiences/${id}`),
+};
+
 // Analytics APIs
 export const analyticsAPI = {
   getTopics: () => axiosInstance.get('/admin/analytics/topics'),

@@ -100,6 +100,31 @@ class ExperienceController {
   }
 
   /**
+   * Get all experiences (Admin only)
+   * GET /api/admin/experiences
+   */
+  static async getAllExperiences(req, res, next) {
+    try {
+      const { page = 1, limit = 20, status, company_name, result } = req.query;
+      const { limit: limitNum, offset } = getPaginationParams(page, limit);
+
+      const filters = {};
+      if (status) filters.status = status;
+      if (company_name) filters.companyName = company_name;
+      if (result) filters.result = result;
+
+      const result_data = await ExperienceService.getAllExperiences(limitNum, offset, filters);
+
+      res.status(constants.HTTP_OK).json({
+        success: true,
+        ...formatPaginatedResponse(result_data.data, result_data.total, page, limitNum),
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
    * Approve submission (Admin only)
    * POST /api/admin/submissions/:id/approve
    */

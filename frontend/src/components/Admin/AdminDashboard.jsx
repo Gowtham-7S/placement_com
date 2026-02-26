@@ -7,6 +7,7 @@ import AdminAnalytics from './AdminAnalytics';
 import CompanyManagement from './CompanyManagement';
 import DriveManagement from './DriveManagement';
 import PendingApprovals from './PendingApprovals';
+import AdminExperience from './AdminExperience';
 
 // Fallback components
 const Placeholder = ({ title }) => <div className="p-8 bg-white rounded-xl shadow-sm border border-gray-100">Placeholder for {title}</div>;
@@ -30,7 +31,7 @@ const AdminDashboard = () => {
       case 'drives':
         return <DriveManagement /> || <Placeholder title="Drives" />;
       case 'experiences':
-        return <Placeholder title="Experiences" />; // Future exp management
+        return <AdminExperience />;
       case 'approvals':
         return <PendingApprovals /> || <Placeholder title="Approvals" />;
       case 'analytics':

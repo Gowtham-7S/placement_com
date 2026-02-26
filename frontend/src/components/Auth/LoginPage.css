@@ -23,7 +23,7 @@
 /* Left Side - Image Section */
 .login-image-section {
   flex: 1;
-  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  background: white;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -71,7 +71,7 @@
 
 .login-subtitle {
   font-size: 0.95rem;
-  color: #718096;
+  color: #465e83;
   margin: 0;
 }
 

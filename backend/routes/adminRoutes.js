@@ -72,6 +72,17 @@ router.delete('/drives/:id', validators.idParam, handleValidationErrors, DriveCo
 
 // ========== EXPERIENCE/SUBMISSION MANAGEMENT ==========
 
+// Get all experiences
+router.get('/experiences', ExperienceController.getAllExperiences);
+
+// Get experience by ID (full details)
+router.get(
+  '/experiences/:id',
+  validators.idParam,
+  handleValidationErrors,
+  ExperienceController.getExperience
+);
+
 // Get pending submissions
 router.get('/submissions/pending', ExperienceController.getPendingSubmissions);
 

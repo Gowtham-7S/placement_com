@@ -1,16 +1,24 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Check as CheckIcon, Close as CloseIcon, AccessTime as AccessTimeIcon,
+  AccessTime as AccessTimeIcon,
   Refresh as RefreshIcon
 } from '@mui/icons-material';
-import { approvalAPI } from '../../api';
+import { approvalAPI, adminExperienceAPI } from '../../api';
+import './PendingApprovals.css';
 
 const PendingApprovals = () => {
   const [approvals, setApprovals] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [comments, setComments] = useState({}); // { [id]: 'comment text' }
-  const [actionLoading, setActionLoading] = useState({}); // { [id]: 'approve'|'reject'|null }
+  
+  // Modal states
+  const [selectedApproval, setSelectedApproval] = useState(null);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [detailError, setDetailError] = useState(null);
+  
+  // Action states
+  const [rejectionReason, setRejectionReason] = useState('');
+  const [actionLoading, setActionLoading] = useState(null);
 
   useEffect(() => {
     fetchPendingApprovals();
@@ -30,34 +38,64 @@ const PendingApprovals = () => {
     }
   };
 
-  const handleApprove = async (id) => {
-    setActionLoading(prev => ({ ...prev, [id]: 'approve' }));
+  const fetchExperienceDetails = async (id) => {
+    setDetailLoading(true);
+    setDetailError(null);
     try {
-      await approvalAPI.approve(id, { comment: comments[id] || null });
-      setApprovals(prev => prev.filter(a => a.id !== id));
+      const response = await adminExperienceAPI.getById(id);
+      if (response.data.success) {
+        setSelectedApproval(response.data.data);
+        setRejectionReason('');
+      }
+    } catch (err) {
+      console.error('Failed to fetch experience details:', err);
+      setDetailError('Failed to load experience details');
+    } finally {
+      setDetailLoading(false);
+    }
+  };
+
+  const handleApprove = async () => {
+    if (!selectedApproval) return;
+    setActionLoading('approve');
+    try {
+      await approvalAPI.approve(selectedApproval.id, { comment: '' });
+      setApprovals(prev => prev.filter(a => a.id !== selectedApproval.id));
+      setSelectedApproval(null);
     } catch (err) {
       console.error('Failed to approve submission:', err);
-      alert('Failed to approve. Please try again.');
+      setDetailError('Failed to approve. Please try again.');
     } finally {
-      setActionLoading(prev => ({ ...prev, [id]: null }));
+      setActionLoading(null);
     }
   };
 
-  const handleReject = async (id) => {
-    setActionLoading(prev => ({ ...prev, [id]: 'reject' }));
+  const handleReject = async () => {
+    if (!selectedApproval || !rejectionReason.trim()) {
+      setDetailError('Please provide a rejection reason');
+      return;
+    }
+    setActionLoading('reject');
     try {
-      await approvalAPI.reject(id, { reason: comments[id] || null });
-      setApprovals(prev => prev.filter(a => a.id !== id));
+      await approvalAPI.reject(selectedApproval.id, { reason: rejectionReason });
+      setApprovals(prev => prev.filter(a => a.id !== selectedApproval.id));
+      setSelectedApproval(null);
     } catch (err) {
       console.error('Failed to reject submission:', err);
-      alert('Failed to reject. Please try again.');
+      setDetailError('Failed to reject. Please try again.');
     } finally {
-      setActionLoading(prev => ({ ...prev, [id]: null }));
+      setActionLoading(null);
     }
   };
 
-  const handleCommentChange = (id, value) => {
-    setComments(prev => ({ ...prev, [id]: value }));
+
+  const getResultBadgeClass = (result) => {
+    const resultMap = {
+      'selected': 'result-selected',
+      'rejected': 'result-rejected',
+      'hold': 'result-hold',
+    };
+    return resultMap[result] || 'result-default';
   };
 
   if (loading) return (
@@ -99,70 +137,37 @@ const PendingApprovals = () => {
       </div>
 
       {/* Approval List */}
-      <div className="space-y-6">
-        {approvals.map((item) => {
-          const isActing = actionLoading[item.id];
-          return (
-            <div key={item.id} className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
-              <div className="flex justify-between items-start mb-4">
-                <div>
-                  <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
-                    {item.company_name}
-                    <span className="text-gray-400 font-light">—</span>
-                    {item.role_applied}
-                  </h3>
-                  <p className="text-sm text-gray-500 mt-1">
-                    {item.first_name && item.last_name
-                      ? <>by <span className="font-medium text-gray-700">{item.first_name} {item.last_name}</span> • </>
-                      : null
-                    }
-                    Submitted: {item.submitted_at ? new Date(item.submitted_at).toLocaleDateString() : 'N/A'}
-                    {item.overall_difficulty && <> • Difficulty: {item.overall_difficulty}</>}
-                  </p>
-                </div>
-                <span className="bg-orange-100 text-orange-600 px-3 py-1 rounded-full text-xs font-medium border border-orange-200 flex-shrink-0">
-                  Pending
-                </span>
+      <div className="space-y-3">
+        {approvals.map((item) => (
+          <div
+            key={item.id}
+            onClick={() => fetchExperienceDetails(item.id)}
+            className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-md hover:border-indigo-200 transition-all cursor-pointer"
+          >
+            <div className="flex justify-between items-start">
+              <div>
+                <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                  {item.company_name}
+                  <span className="text-gray-400 font-light">—</span>
+                  {item.role_applied}
+                </h3>
+                <p className="text-sm text-gray-500 mt-1">
+                  {item.first_name && item.last_name
+                    ? <>by <span className="font-medium text-gray-700">{item.first_name} {item.last_name}</span> • </>
+                    : null
+                  }
+                  Submitted: {item.submitted_at ? new Date(item.submitted_at).toLocaleDateString() : 'N/A'}
+                </p>
               </div>
-
-              {/* Comment + Actions Row */}
-              <div className="flex gap-3 items-center mt-6 flex-col sm:flex-row">
-                <input
-                  type="text"
-                  placeholder="Add a comment (optional)..."
-                  className="flex-1 bg-gray-50 border border-gray-200 rounded-lg px-4 py-2.5 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all placeholder-gray-400 w-full"
-                  value={comments[item.id] || ''}
-                  onChange={(e) => handleCommentChange(item.id, e.target.value)}
-                  disabled={!!isActing}
-                />
-                <div className="flex gap-2 flex-shrink-0">
-                  <button
-                    onClick={() => handleApprove(item.id)}
-                    disabled={!!isActing}
-                    className="bg-green-600 hover:bg-green-700 disabled:opacity-60 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition-colors"
-                  >
-                    {isActing === 'approve'
-                      ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                      : <CheckIcon fontSize="small" />
-                    }
-                    Approve
-                  </button>
-                  <button
-                    onClick={() => handleReject(item.id)}
-                    disabled={!!isActing}
-                    className="bg-red-500 hover:bg-red-600 disabled:opacity-60 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition-colors"
-                  >
-                    {isActing === 'reject'
-                      ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                      : <CloseIcon fontSize="small" />
-                    }
-                    Reject
-                  </button>
-                </div>
-              </div>
+              <span className="bg-orange-100 text-orange-600 px-3 py-1 rounded-full text-xs font-medium border border-orange-200 flex-shrink-0">
+                Pending
+              </span>
             </div>
-          );
-        })}
+            <p className="text-sm text-indigo-600 mt-3 flex items-center gap-1">
+              👁️ Click to view details
+            </p>
+          </div>
+        ))}
 
         {approvals.length === 0 && !loading && (
           <div className="text-center py-16 bg-white rounded-xl border border-dashed border-gray-200">
@@ -174,6 +179,185 @@ const PendingApprovals = () => {
           </div>
         )}
       </div>
+
+      {/* Detail Modal */}
+      {selectedApproval && (
+        <div className="modal-overlay" onClick={() => setSelectedApproval(null)}>
+          <div className="modal-content-approval" onClick={e => e.stopPropagation()}>
+            {detailLoading ? (
+              <div className="modal-loading">
+                <div className="spinner"></div>
+                <p>Loading details...</p>
+              </div>
+            ) : detailError ? (
+              <div className="detail-error">
+                <p>{detailError}</p>
+                <button onClick={() => setSelectedApproval(null)} className="close-modal-btn">Close</button>
+              </div>
+            ) : (
+              <>
+                {/* Modal Header */}
+                <div className="modal-header-approval">
+                  <h3>{selectedApproval.company_name} - {selectedApproval.role_applied}</h3>
+                  <button onClick={() => setSelectedApproval(null)} className="modal-close-btn">✕</button>
+                </div>
+
+                {/* Modal Body */}
+                <div className="modal-body-approval">
+                  {/* Basic Details */}
+                  <section className="detail-section">
+                    <h4>Basic Information</h4>
+                    <div className="detail-grid">
+                      <div className="detail-item">
+                        <label>Company</label>
+                        <p>{selectedApproval.company_name}</p>
+                      </div>
+                      <div className="detail-item">
+                        <label>Position</label>
+                        <p>{selectedApproval.role_applied}</p>
+                      </div>
+                      <div className="detail-item">
+                        <label>Result</label>
+                        <p>
+                          <span className={`result-badge ${getResultBadgeClass(selectedApproval.result)}`}>
+                            {selectedApproval.result || 'N/A'}
+                          </span>
+                        </p>
+                      </div>
+                      <div className="detail-item">
+                        <label>Offer Received</label>
+                        <p>{selectedApproval.offer_received ? '✓ Yes' : '✗ No'}</p>
+                      </div>
+                    </div>
+                  </section>
+
+                  {/* Interview Details */}
+                  <section className="detail-section">
+                    <h4>Interview Details</h4>
+                    <div className="detail-grid">
+                      <div className="detail-item">
+                        <label>Overall Difficulty</label>
+                        <p className="difficulty-badge">{selectedApproval.overall_difficulty || 'N/A'}</p>
+                      </div>
+                      {selectedApproval.ctc_offered && (
+                        <div className="detail-item">
+                          <label>CTC Offered</label>
+                          <p>₹ {selectedApproval.ctc_offered.toLocaleString()}</p>
+                        </div>
+                      )}
+                      <div className="detail-item">
+                        <label>Anonymous</label>
+                        <p>{selectedApproval.is_anonymous ? '🔐 Yes' : 'No'}</p>
+                      </div>
+                    </div>
+                  </section>
+
+                  {/* Feedback */}
+                  {selectedApproval.overall_feedback && (
+                    <section className="detail-section">
+                      <h4>Student Feedback</h4>
+                      <div className="feedback-box-approval">
+                        <p>{selectedApproval.overall_feedback}</p>
+                      </div>
+                    </section>
+                  )}
+
+                  {/* Rounds */}
+                  {selectedApproval.rounds && selectedApproval.rounds.length > 0 && (
+                    <section className="detail-section">
+                      <h4>Interview Rounds ({selectedApproval.rounds.length})</h4>
+                      <div className="rounds-container">
+                        {selectedApproval.rounds.map((round, idx) => (
+                          <div key={idx} className="round-card">
+                            <div className="round-header">
+                              <h5>Round {round.round_number || idx + 1} - {round.round_type}</h5>
+                              <span className="round-result">{round.result || 'N/A'}</span>
+                            </div>
+                            <div className="round-details">
+                              {round.difficulty_level && (
+                                <p><strong>Difficulty:</strong> {round.difficulty_level}</p>
+                              )}
+                              {round.topics && round.topics.length > 0 && (
+                                <p><strong>Topics:</strong> {round.topics.join(', ')}</p>
+                              )}
+                              {round.problem_statement && (
+                                <div className="problem-statement">
+                                  <strong>Problem Statement:</strong>
+                                  <p>{round.problem_statement}</p>
+                                </div>
+                              )}
+                              {round.tips_and_insights && (
+                                <div className="tips-box">
+                                  <strong>💡 Tips & Insights:</strong>
+                                  <p>{round.tips_and_insights}</p>
+                                </div>
+                              )}
+                            </div>
+                            {round.questions && round.questions.length > 0 && (
+                              <div className="questions-list">
+                                <strong>Questions Asked:</strong>
+                                <ul>
+                                  {round.questions.map((q, qIdx) => (
+                                    <li key={qIdx}>
+                                      <span className="question-text">{q.question_text}</span>
+                                      <span className="question-meta">[{q.category} • {q.difficulty}]</span>
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </section>
+                  )}
+                </div>
+
+                {/* Modal Footer - Action Buttons */}
+                <div className="modal-footer-approval">
+                  <div className="rejection-section">
+                    <label>Rejection Reason (required if rejecting)</label>
+                    <textarea
+                      value={rejectionReason}
+                      onChange={(e) => setRejectionReason(e.target.value)}
+                      placeholder="Provide feedback for rejection..."
+                      className="rejection-textarea"
+                      disabled={!!actionLoading}
+                      rows="3"
+                    />
+                  </div>
+
+                  {detailError && <div className="action-error">{detailError}</div>}
+
+                  <div className="action-buttons">
+                    <button
+                      onClick={() => setSelectedApproval(null)}
+                      className="action-btn-cancel"
+                      disabled={!!actionLoading}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleReject}
+                      className="action-btn-reject"
+                      disabled={!!actionLoading || !rejectionReason.trim()}
+                    >
+                      {actionLoading === 'reject' ? 'Rejecting...' : 'Reject'}
+                    </button>
+                    <button
+                      onClick={handleApprove}
+                      className="action-btn-approve"
+                      disabled={!!actionLoading}
+                    >
+                      {actionLoading === 'approve' ? 'Approving...' : 'Approve'}
+                    </button>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 };
