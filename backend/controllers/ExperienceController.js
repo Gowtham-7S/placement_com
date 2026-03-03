@@ -85,10 +85,20 @@ class ExperienceController {
    */
   static async getPendingSubmissions(req, res, next) {
     try {
-      const { page = 1, limit = 20 } = req.query;
+      const {
+        page = 1, limit = 20,
+        date_from, date_to, ctc_min, company_name
+      } = req.query;
       const { limit: limitNum, offset } = getPaginationParams(page, limit);
 
-      const result = await ExperienceService.getPendingSubmissions(limitNum, offset);
+      const filters = {
+        date_from,
+        date_to,
+        ctc_min: ctc_min ? parseFloat(ctc_min) : null,
+        company_name
+      };
+
+      const result = await ExperienceService.getPendingSubmissions(limitNum, offset, filters);
 
       res.status(constants.HTTP_OK).json({
         success: true,
@@ -137,6 +147,26 @@ class ExperienceController {
         success: true,
         message: 'Submission rejected successfully',
         data: result,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+  /**
+   * Get all submissions (Admin only) - any status
+   * GET /api/admin/submissions/all
+   */
+  static async getAllSubmissions(req, res, next) {
+    try {
+      const { page = 1, limit = 30, status, company_name } = req.query;
+      const { limit: limitNum, offset } = getPaginationParams(page, limit);
+
+      const filters = { status, company_name };
+      const result = await ExperienceService.getAllSubmissions(limitNum, offset, filters);
+
+      res.status(constants.HTTP_OK).json({
+        success: true,
+        ...formatPaginatedResponse(result.data, result.total, page, limitNum),
       });
     } catch (error) {
       next(error);

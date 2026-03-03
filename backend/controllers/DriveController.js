@@ -12,12 +12,20 @@ class DriveController {
    */
   static async getAllDrives(req, res, next) {
     try {
-      const { page = 1, limit = 20, company_id, status } = req.query;
+      const {
+        page = 1, limit = 20, company_id, status,
+        date_from, date_to, ctc_min, ctc_max, batch
+      } = req.query;
       const { limit: limitNum, offset } = getPaginationParams(page, limit);
 
       const filters = {
         company_id: company_id ? parseInt(company_id) : null,
-        status
+        status,
+        date_from,
+        date_to,
+        ctc_min: ctc_min ? parseFloat(ctc_min) : null,
+        ctc_max: ctc_max ? parseFloat(ctc_max) : null,
+        batch
       };
 
       const result = await DriveService.getAllDrives(limitNum, offset, filters);

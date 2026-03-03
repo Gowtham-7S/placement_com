@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { experienceAPI } from '../../api';
 
 const SubmitExperience = () => {
   const [step, setStep] = useState(1);
-  const [formData, setFormData] = useState({
+  const defaultFormData = {
     company_name: '',
     role_applied: '',
     drive_id: '', // Optional, can be selected from dropdown if drives exist
@@ -17,7 +17,19 @@ const SubmitExperience = () => {
     confidence_level: 5,
     is_anonymous: false,
     rounds: [] // Array of round objects
+  };
+
+  const [formData, setFormData] = useState(() => {
+    const saved = localStorage.getItem('experienceDraft');
+    if (saved) {
+      try { return JSON.parse(saved); } catch (e) { }
+    }
+    return defaultFormData;
   });
+
+  useEffect(() => {
+    localStorage.setItem('experienceDraft', JSON.stringify(formData));
+  }, [formData]);
 
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -95,6 +107,7 @@ const SubmitExperience = () => {
         confidence_level: formData.confidence_level ? parseInt(formData.confidence_level) : null,
       };
       await experienceAPI.submit(payload);
+      localStorage.removeItem('experienceDraft');
       setSuccess(true);
     } catch (err) {
       const msg = err.response?.data?.message || err.message || 'Submission failed';

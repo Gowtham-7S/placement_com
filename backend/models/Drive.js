@@ -144,6 +144,36 @@ class Drive {
         paramIndex++;
       }
 
+      if (filters.date_from) {
+        query += ` AND d.interview_date >= $${paramIndex}`;
+        values.push(filters.date_from);
+        paramIndex++;
+      }
+
+      if (filters.date_to) {
+        query += ` AND d.interview_date <= $${paramIndex}`;
+        values.push(filters.date_to);
+        paramIndex++;
+      }
+
+      if (filters.ctc_min) {
+        query += ` AND d.ctc >= $${paramIndex}`;
+        values.push(filters.ctc_min);
+        paramIndex++;
+      }
+
+      if (filters.ctc_max) {
+        query += ` AND d.ctc <= $${paramIndex}`;
+        values.push(filters.ctc_max);
+        paramIndex++;
+      }
+
+      if (filters.batch) {
+        query += ` AND d.eligible_batches ILIKE $${paramIndex}`;
+        values.push(`%${filters.batch}%`);
+        paramIndex++;
+      }
+
       query += ` ORDER BY d.interview_date DESC LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`;
       values.push(limit, offset);
 
@@ -161,6 +191,36 @@ class Drive {
       if (filters.status) {
         countQuery += ` AND d.drive_status = $${countParamIndex}`;
         countValues.push(filters.status);
+        countParamIndex++;
+      }
+
+      if (filters.date_from) {
+        countQuery += ` AND d.interview_date >= $${countParamIndex}`;
+        countValues.push(filters.date_from);
+        countParamIndex++;
+      }
+
+      if (filters.date_to) {
+        countQuery += ` AND d.interview_date <= $${countParamIndex}`;
+        countValues.push(filters.date_to);
+        countParamIndex++;
+      }
+
+      if (filters.ctc_min) {
+        countQuery += ` AND d.ctc >= $${countParamIndex}`;
+        countValues.push(filters.ctc_min);
+        countParamIndex++;
+      }
+
+      if (filters.ctc_max) {
+        countQuery += ` AND d.ctc <= $${countParamIndex}`;
+        countValues.push(filters.ctc_max);
+        countParamIndex++;
+      }
+
+      if (filters.batch) {
+        countQuery += ` AND d.eligible_batches ILIKE $${countParamIndex}`;
+        countValues.push(`%${filters.batch}%`);
         countParamIndex++;
       }
 

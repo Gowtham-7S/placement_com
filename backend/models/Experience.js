@@ -19,6 +19,27 @@ class Experience {
     }
   }
 
+  static async countByDriveId(driveId) {
+    try {
+      const query = 'SELECT COUNT(*) as total FROM experiences WHERE drive_id = $1';
+      const result = await pool.query(query, [driveId]);
+      return parseInt(result.rows[0].total) || 0;
+    } catch (error) {
+      throw new Error(`Error counting experiences by drive: ${error.message}`);
+    }
+  }
+
+  static async findByUserAndDrive(userId, driveId) {
+    try {
+      if (!driveId) return null;
+      const query = 'SELECT id FROM experiences WHERE user_id = $1 AND drive_id = $2 LIMIT 1';
+      const result = await pool.query(query, [userId, driveId]);
+      return result.rows[0] || null;
+    } catch (error) {
+      throw new Error(`Error checking duplicate experience: ${error.message}`);
+    }
+  }
+
   static async create(experienceData, client = pool) {
     try {
       const {
@@ -70,17 +91,58 @@ class Experience {
     }
   }
 
-  static async getByApprovalStatus(status, limit = 20, offset = 0) {
+  static async getByApprovalStatus(status, limit = 20, offset = 0, filters = {}) {
     try {
-      const countQuery = 'SELECT COUNT(*) as total FROM experiences WHERE approval_status = $1';
-      const dataQuery = `
-        SELECT id, user_id, company_name, role_applied, result, approval_status, submitted_at 
-        FROM experiences WHERE approval_status = $1 
-        ORDER BY submitted_at DESC LIMIT $2 OFFSET $3
-      `;
+      // null status means fetch all, otherwise filter by specific status
+      const statusFilter = status ? 'WHERE approval_status = $1' : 'WHERE 1=1';
+      const baseValues = status ? [status] : [];
+      let paramIndex = status ? 2 : 1;
 
-      const countResult = await pool.query(countQuery, [status]);
-      const dataResult = await pool.query(dataQuery, [status, limit, offset]);
+      let countQuery = `SELECT COUNT(*) as total FROM experiences ${statusFilter}`;
+      let dataQuery = `
+        SELECT id, user_id, company_name, role_applied, result, approval_status, submitted_at, ctc_offered
+        FROM experiences ${statusFilter}
+      `;
+      const countValues = [...baseValues];
+      const values = [...baseValues];
+
+      if (filters.company_name) {
+        countQuery += ` AND company_name ILIKE $${paramIndex}`;
+        dataQuery += ` AND company_name ILIKE $${paramIndex}`;
+        countValues.push(`%${filters.company_name}%`);
+        values.push(`%${filters.company_name}%`);
+        paramIndex++;
+      }
+
+      if (filters.date_from) {
+        countQuery += ` AND submitted_at >= $${paramIndex}`;
+        dataQuery += ` AND submitted_at >= $${paramIndex}`;
+        countValues.push(filters.date_from);
+        values.push(filters.date_from);
+        paramIndex++;
+      }
+
+      if (filters.date_to) {
+        countQuery += ` AND submitted_at <= $${paramIndex}`;
+        dataQuery += ` AND submitted_at <= $${paramIndex}`;
+        countValues.push(filters.date_to);
+        values.push(filters.date_to);
+        paramIndex++;
+      }
+
+      if (filters.ctc_min) {
+        countQuery += ` AND ctc_offered >= $${paramIndex}`;
+        dataQuery += ` AND ctc_offered >= $${paramIndex}`;
+        countValues.push(filters.ctc_min);
+        values.push(filters.ctc_min);
+        paramIndex++;
+      }
+
+      dataQuery += ` ORDER BY submitted_at DESC LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`;
+      values.push(limit, offset);
+
+      const countResult = await pool.query(countQuery, countValues);
+      const dataResult = await pool.query(dataQuery, values);
 
       return {
         total: parseInt(countResult.rows[0].total),

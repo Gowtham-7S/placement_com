@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   Check as CheckIcon, Close as CloseIcon, AccessTime as AccessTimeIcon,
-  Refresh as RefreshIcon
+  Refresh as RefreshIcon, Search as SearchIcon, FilterAlt as FilterIcon
 } from '@mui/icons-material';
 import { approvalAPI } from '../../api';
 
@@ -12,6 +12,11 @@ const PendingApprovals = () => {
   const [comments, setComments] = useState({}); // { [id]: 'comment text' }
   const [actionLoading, setActionLoading] = useState({}); // { [id]: 'approve'|'reject'|null }
 
+  const [showFilters, setShowFilters] = useState(false);
+  const [advFilters, setAdvFilters] = useState({
+    company_name: '', date_from: '', date_to: '', ctc_min: ''
+  });
+
   useEffect(() => {
     fetchPendingApprovals();
   }, []);
@@ -20,7 +25,14 @@ const PendingApprovals = () => {
     try {
       setLoading(true);
       setError(null);
-      const response = await approvalAPI.getPending({ limit: 50 });
+
+      const payload = { limit: 50 };
+      if (advFilters.company_name) payload.company_name = advFilters.company_name;
+      if (advFilters.date_from) payload.date_from = advFilters.date_from;
+      if (advFilters.date_to) payload.date_to = advFilters.date_to;
+      if (advFilters.ctc_min) payload.ctc_min = advFilters.ctc_min;
+
+      const response = await approvalAPI.getPending(payload);
       setApprovals(response.data.data || []);
     } catch (err) {
       console.error('Failed to load pending approvals:', err);
@@ -97,6 +109,51 @@ const PendingApprovals = () => {
           <RefreshIcon />
         </button>
       </div>
+
+      {/* Search and Filters */}
+      <div className="bg-white p-2 rounded-xl border border-gray-200 shadow-sm mb-6 flex flex-col md:flex-row gap-2">
+        <div className="flex-1 flex items-center px-3 gap-2">
+          <SearchIcon className="text-gray-400" />
+          <input
+            type="text"
+            placeholder="Search by company name..."
+            className="flex-1 py-2 outline-none text-gray-700 placeholder-gray-400"
+            value={advFilters.company_name}
+            onChange={(e) => setAdvFilters({ ...advFilters, company_name: e.target.value })}
+            onKeyDown={(e) => e.key === 'Enter' && fetchPendingApprovals()}
+          />
+        </div>
+        <div className="h-px md:h-auto md:w-px bg-gray-200 mx-2"></div>
+        <button
+          onClick={() => setShowFilters(!showFilters)}
+          className={`flex items-center gap-1 px-4 py-2 font-medium rounded-lg text-sm transition-colors ${showFilters ? 'bg-indigo-50 text-indigo-700' : 'text-gray-600 hover:bg-gray-50'}`}
+        >
+          <FilterIcon fontSize="small" />
+          More Filters
+        </button>
+      </div>
+
+      {showFilters && (
+        <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm mb-6 grid grid-cols-1 md:grid-cols-2 gap-4 animate-fade-in-up">
+          <div>
+            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Submission Date Range</label>
+            <div className="flex items-center gap-2">
+              <input type="date" value={advFilters.date_from} onChange={e => setAdvFilters({ ...advFilters, date_from: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-primary focus:border-primary outline-none text-gray-700" title="From" />
+              <span className="text-gray-400">-</span>
+              <input type="date" value={advFilters.date_to} onChange={e => setAdvFilters({ ...advFilters, date_to: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-primary focus:border-primary outline-none text-gray-700" title="To" />
+            </div>
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Min CTC Offered (LPA)</label>
+            <div className="flex gap-2">
+              <input type="number" placeholder="Min CTC" value={advFilters.ctc_min} onChange={e => setAdvFilters({ ...advFilters, ctc_min: e.target.value })} className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-primary focus:border-primary outline-none" />
+              <button onClick={fetchPendingApprovals} className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm hover:bg-indigo-700 transition-colors font-medium">
+                Apply
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Approval List */}
       <div className="space-y-6">

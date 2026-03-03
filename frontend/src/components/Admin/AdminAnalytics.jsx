@@ -1,6 +1,14 @@
 import React, { useEffect, useState, useContext } from 'react';
 import { AuthContext } from '../../context/AuthContext';
 import { driveAPI } from '../../api';
+import {
+  Business as BusinessIcon,
+  Campaign as CampaignIcon,
+  Description as DescriptionIcon,
+  HourglassEmpty as HourglassIcon,
+  TrendingUp as TrendingUpIcon,
+  CalendarMonth as CalendarIcon,
+} from '@mui/icons-material';
 
 const AdminAnalytics = () => {
   const { user } = useContext(AuthContext);
@@ -74,7 +82,7 @@ const AdminAnalytics = () => {
           value={stats?.overall?.total_companies || 0}
           subtitle={stats?.overall?.total_companies > 0 ? `${stats.overall.total_companies} registered` : 'None yet'}
           subtitleColor="text-blue-500"
-          icon="🏢"
+          icon={<BusinessIcon fontSize="small" />}
           bgClass="bg-blue-50"
           iconClass="text-blue-600"
         />
@@ -83,7 +91,7 @@ const AdminAnalytics = () => {
           value={stats?.overall?.total_drives || 0}
           subtitle={`${stats?.upcomingDrives?.length || 0} upcoming`}
           subtitleColor="text-indigo-500"
-          icon="📢"
+          icon={<CampaignIcon fontSize="small" />}
           bgClass="bg-indigo-50"
           iconClass="text-indigo-600"
         />
@@ -92,16 +100,16 @@ const AdminAnalytics = () => {
           value={stats?.overall?.total_experiences || 0}
           subtitle={stats?.overall?.total_experiences > 0 ? 'Total submissions' : 'None yet'}
           subtitleColor="text-green-500"
-          icon="📄"
-          bgClass="bg-blue-50"
-          iconClass="text-blue-600"
+          icon={<DescriptionIcon fontSize="small" />}
+          bgClass="bg-green-50"
+          iconClass="text-green-600"
         />
         <DashboardCard
           title="Pending Approvals"
           value={stats?.overall?.pending_approvals || 0}
           subtitle={stats?.overall?.pending_approvals > 0 ? 'Needs review' : 'All reviewed'}
           subtitleColor={stats?.overall?.pending_approvals > 0 ? 'text-orange-500' : 'text-green-500'}
-          icon="⏳"
+          icon={<HourglassIcon fontSize="small" />}
           bgClass="bg-orange-50"
           iconClass="text-orange-600"
         />
@@ -110,8 +118,9 @@ const AdminAnalytics = () => {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Recent Experiences */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-          <div className="p-6 border-b border-gray-50">
-            <h3 className="text-lg font-bold text-gray-800">Recent Experiences</h3>
+          <div className="p-5 border-b border-gray-100 flex items-center gap-2">
+            <TrendingUpIcon fontSize="small" className="text-indigo-500" />
+            <h3 className="text-base font-bold text-gray-800">Recent Experiences</h3>
           </div>
           <div className="divide-y divide-gray-50">
             {stats?.recentActivity?.map((act) => (
@@ -133,8 +142,9 @@ const AdminAnalytics = () => {
 
         {/* Upcoming Drives */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-          <div className="p-6 border-b border-gray-50">
-            <h3 className="text-lg font-bold text-gray-800">Upcoming Drives</h3>
+          <div className="p-5 border-b border-gray-100 flex items-center gap-2">
+            <CalendarIcon fontSize="small" className="text-indigo-500" />
+            <h3 className="text-base font-bold text-gray-800">Upcoming Drives</h3>
           </div>
           <div className="divide-y divide-gray-50">
             {stats?.upcomingDrives?.length > 0 ? (

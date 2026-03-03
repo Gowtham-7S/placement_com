@@ -75,6 +75,9 @@ router.delete('/drives/:id', validators.idParam, handleValidationErrors, DriveCo
 // Get pending submissions
 router.get('/submissions/pending', ExperienceController.getPendingSubmissions);
 
+// Get all submissions (any status)
+router.get('/submissions/all', ExperienceController.getAllSubmissions);
+
 // Approve submission
 router.post(
   '/submissions/:id/approve',

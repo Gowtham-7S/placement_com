@@ -6,6 +6,12 @@ import {
   ArrowBack as ArrowBackIcon,
   AttachMoney as MoneyIcon,
   AccessTime as TimeIcon,
+  CheckCircle as CheckCircleIcon,
+  Search as SearchIcon,
+  Business as BusinessIcon,
+  Campaign as CampaignIcon,
+  Article as ArticleIcon,
+  EmojiEvents as EmojiEventsIcon,
 } from '@mui/icons-material';
 
 const difficultyColor = {
@@ -287,34 +293,47 @@ const CompanyBrowser = () => {
       {stats && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
           {[
-            { label: 'Companies', value: stats.total_companies, color: 'indigo' },
-            { label: 'Active Drives', value: stats.active_drives, color: 'blue' },
-            { label: 'Experiences', value: stats.total_experiences, color: 'purple' },
-            { label: 'Selections', value: stats.total_selections, color: 'green' },
-          ].map(({ label, value, color }) => (
-            <div key={label} className={`bg-${color}-50 rounded-xl p-4 text-center`}>
-              <div className={`text-2xl font-bold text-${color}-700`}>{value ?? '—'}</div>
-              <div className="text-xs text-gray-500 mt-1">{label}</div>
+            { label: 'Companies', value: stats.total_companies, color: 'indigo', icon: <BusinessIcon fontSize="small" />, sub: 'registered' },
+            { label: 'Active Drives', value: stats.active_drives, color: 'blue', icon: <CampaignIcon fontSize="small" />, sub: 'currently open' },
+            { label: 'Experiences', value: stats.total_experiences, color: 'purple', icon: <ArticleIcon fontSize="small" />, sub: 'shared by seniors' },
+            { label: 'Selections', value: stats.total_selections, color: 'green', icon: <EmojiEventsIcon fontSize="small" />, sub: 'placements secured' },
+          ].map(({ label, value, color, icon, sub }) => (
+            <div key={label} className={`bg-white rounded-xl p-4 border border-gray-100 shadow-sm hover:shadow-md transition-shadow`}>
+              <div className="flex items-center justify-between mb-3">
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">{label}</p>
+                <div className={`w-8 h-8 rounded-lg bg-${color}-50 text-${color}-600 flex items-center justify-center`}>
+                  {icon}
+                </div>
+              </div>
+              <div className={`text-3xl font-bold text-${color}-700 mb-1`}>{value ?? '—'}</div>
+              <p className="text-xs text-gray-400">{sub}</p>
             </div>
           ))}
         </div>
       )}
 
       <div className="flex flex-col md:flex-row gap-6">
-        {/* Company List */}
+        {/* Company Grid */}
         <div className="flex-1">
           <div className="flex items-center gap-3 mb-4">
             <h2 className="text-xl font-bold text-gray-900">Companies</h2>
-            <span className="text-sm text-gray-400">({filteredCompanies.length} with reports)</span>
+            <span className="inline-flex items-center gap-1 bg-emerald-50 text-emerald-700 text-xs font-semibold px-2.5 py-1 rounded-full border border-emerald-100">
+              <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full"></span>
+              {filteredCompanies.length} result{filteredCompanies.length !== 1 ? 's' : ''}
+            </span>
           </div>
 
-          <input
-            type="text"
-            placeholder="Search companies..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full mb-4 px-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-indigo-400"
-          />
+          {/* Enhanced Search Bar */}
+          <div className="flex items-center gap-2 mb-5 bg-white border border-gray-200 rounded-xl px-4 py-2 shadow-sm">
+            <SearchIcon className="text-gray-400" fontSize="small" />
+            <input
+              type="text"
+              placeholder="Search companies..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="flex-1 py-1 outline-none text-sm text-gray-700 placeholder-gray-400"
+            />
+          </div>
 
           {filteredCompanies.length === 0 ? (
             <div className="text-center py-12 text-gray-500 bg-white rounded-xl border border-dashed border-gray-200">
@@ -323,32 +342,56 @@ const CompanyBrowser = () => {
                 : 'No companies match your search.'}
             </div>
           ) : (
-            <div className="space-y-3">
-              {filteredCompanies.map((c) => (
-                <div
-                  key={c.company_name}
-                  onClick={() => openCompany(c)}
-                  className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 cursor-pointer hover:shadow-md hover:border-indigo-200 transition-all group"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center font-bold text-lg group-hover:bg-indigo-600 group-hover:text-white transition-colors">
-                      {c.company_name?.[0]?.toUpperCase()}
+            <div className={`grid gap-4 ${filteredCompanies.length === 1 ? 'grid-cols-1 max-w-md' : 'grid-cols-1 sm:grid-cols-2'}`}>
+              {filteredCompanies.map((c) => {
+                const selRate = c.selection_rate ?? 0;
+                const colorClass = selRate >= 50 ? 'text-emerald-600' : selRate >= 25 ? 'text-amber-500' : 'text-red-500';
+                const barClass = selRate >= 50 ? 'bg-emerald-500' : selRate >= 25 ? 'bg-amber-400' : 'bg-red-400';
+                return (
+                  <div
+                    key={c.company_name}
+                    onClick={() => openCompany(c)}
+                    className="bg-white rounded-xl border border-gray-100 shadow-sm p-5 cursor-pointer hover:shadow-md hover:border-emerald-200 transition-all group relative overflow-hidden"
+                  >
+                    {/* Hover top accent strip */}
+                    <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-emerald-400 to-teal-500 opacity-0 group-hover:opacity-100 transition-opacity" />
+
+                    {/* Card Header */}
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="w-11 h-11 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold text-lg group-hover:bg-emerald-600 group-hover:text-white transition-colors flex-shrink-0">
+                        {c.company_name?.[0]?.toUpperCase()}
+                      </div>
+                      <div className="flex-1 overflow-hidden">
+                        <h3 className="font-bold text-gray-900 group-hover:text-emerald-700 transition-colors truncate text-sm">
+                          {c.company_name}
+                        </h3>
+                        <p className="text-xs text-gray-400 mt-0.5">{c.total_submissions} interview report(s)</p>
+                      </div>
+                      {c.avg_ctc ? (
+                        <span className="text-xs font-bold text-gray-700 bg-gray-100 px-2 py-1 rounded-lg flex-shrink-0">
+                          ₹{Number(c.avg_ctc).toFixed(1)} LPA
+                        </span>
+                      ) : null}
                     </div>
-                    <div className="flex-1">
-                      <h3 className="font-semibold text-gray-900 group-hover:text-indigo-600 transition-colors">
-                        {c.company_name}
-                      </h3>
-                      <div className="flex gap-3 text-xs text-gray-500 mt-0.5">
-                        <span>{c.total_submissions} report(s)</span>
-                        {c.selection_rate != null && <span className="text-green-600">{c.selection_rate}% selected</span>}
+
+                    {/* Selection Rate Progress Bar */}
+                    <div>
+                      <div className="flex justify-between text-xs mb-1.5">
+                        <span className="text-gray-400 flex items-center gap-1">
+                          <CheckCircleIcon fontSize="inherit" /> Selection Rate
+                        </span>
+                        <span className={`font-bold ${colorClass}`}>{selRate}%</span>
+                      </div>
+                      <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                        <div
+                          className={`h-full rounded-full ${barClass}`}
+                          style={{ width: `${Math.min(selRate, 100)}%` }}
+                        />
                       </div>
                     </div>
-                    <div className="text-right text-xs text-gray-500">
-                      {c.avg_ctc ? <span className="font-medium text-gray-700">₹{Number(c.avg_ctc).toFixed(1)} LPA</span> : ''}
-                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>

@@ -1,5 +1,6 @@
 const Drive = require('../models/Drive');
 const Company = require('../models/Company');
+const Experience = require('../models/Experience');
 const { AppError } = require('../middlewares/errorHandler');
 const constants = require('../config/constants');
 
@@ -86,6 +87,15 @@ class DriveService {
    */
   static async deleteDrive(id) {
     try {
+      const linkedCount = await Experience.countByDriveId(id);
+      if (linkedCount > 0) {
+        throw new AppError(
+          'Cannot delete drive as it has associated student experiences. Please remove or reassign them first.',
+          400,
+          'DRIVE_HAS_EXPERIENCES'
+        );
+      }
+
       const result = await Drive.delete(id);
       if (!result) {
         throw new AppError(

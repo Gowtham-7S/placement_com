@@ -14,6 +14,17 @@ class ExperienceService {
    * Submit new experience
    */
   static async submitExperience(userId, experienceData) {
+    if (experienceData.drive_id) {
+      const existing = await Experience.findByUserAndDrive(userId, experienceData.drive_id);
+      if (existing) {
+        throw new AppError(
+          'You have already submitted an experience for this drive.',
+          400,
+          'DUPLICATE_EXPERIENCE'
+        );
+      }
+    }
+
     const client = await pool.connect();
     try {
       await client.query('BEGIN');
@@ -199,11 +210,25 @@ class ExperienceService {
   /**
    * Get pending submissions (Admin only)
    */
-  static async getPendingSubmissions(limit = 20, offset = 0) {
+  static async getPendingSubmissions(limit = 20, offset = 0, filters = {}) {
     try {
-      return await Experience.getByApprovalStatus('pending', limit, offset);
+      return await Experience.getByApprovalStatus('pending', limit, offset, filters);
     } catch (error) {
       throw new Error(`Get pending submissions error: ${error.message}`);
+    }
+  }
+
+  /**
+   * Get all submissions regardless of status (Admin only)
+   */
+  static async getAllSubmissions(limit = 30, offset = 0, filters = {}) {
+    try {
+      const { status, company_name } = filters;
+      const validStatuses = ['pending', 'accepted', 'rejected'];
+      const resolvedStatus = validStatuses.includes(status) ? status : null;
+      return await Experience.getByApprovalStatus(resolvedStatus, limit, offset, { company_name });
+    } catch (error) {
+      throw new Error(`Get all submissions error: ${error.message}`);
     }
   }
 

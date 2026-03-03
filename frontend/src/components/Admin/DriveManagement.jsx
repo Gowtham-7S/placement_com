@@ -4,7 +4,7 @@ import {
   CalendarToday as CalendarIcon, ArrowBack as ArrowBackIcon,
   People as PeopleIcon, Business as BusinessIcon, Add as AddIcon,
   AttachMoney as MoneyIcon, Close as CloseIcon,
-  Edit as EditIcon, Delete as DeleteIcon,
+  Edit as EditIcon, Delete as DeleteIcon, FilterAlt as FilterIcon,
 } from '@mui/icons-material';
 import {
   Dialog, DialogTitle, DialogContent, DialogActions,
@@ -21,6 +21,11 @@ const DriveManagement = () => {
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('All Status');
+
+  const [showFilters, setShowFilters] = useState(false);
+  const [advFilters, setAdvFilters] = useState({
+    date_from: '', date_to: '', ctc_min: '', ctc_max: '', batch: ''
+  });
 
   // Add Drive modal state
   const [addOpen, setAddOpen] = useState(false);
@@ -55,7 +60,14 @@ const DriveManagement = () => {
     try {
       setLoading(true);
       setError(null);
-      const response = await driveAPI.getAll({ limit: 100 });
+      const payload = { limit: 100 };
+      if (advFilters.date_from) payload.date_from = advFilters.date_from;
+      if (advFilters.date_to) payload.date_to = advFilters.date_to;
+      if (advFilters.ctc_min) payload.ctc_min = advFilters.ctc_min;
+      if (advFilters.ctc_max) payload.ctc_max = advFilters.ctc_max;
+      if (advFilters.batch) payload.batch = advFilters.batch;
+
+      const response = await driveAPI.getAll(payload);
       setDrives(response.data.data || []);
     } catch (err) {
       console.error('Failed to load drives:', err);
@@ -389,7 +401,45 @@ const DriveManagement = () => {
           <option value="completed">Completed</option>
           <option value="cancelled">Cancelled</option>
         </select>
+        <div className="h-px md:h-auto md:w-px bg-gray-200 mx-2"></div>
+        <button
+          onClick={() => setShowFilters(!showFilters)}
+          className={`flex items-center gap-1 px-4 py-2 font-medium rounded-lg text-sm transition-colors ${showFilters ? 'bg-indigo-50 text-indigo-700' : 'text-gray-600 hover:bg-gray-50'}`}
+        >
+          <FilterIcon fontSize="small" />
+          More Filters
+        </button>
       </div>
+
+      {showFilters && (
+        <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm mb-6 grid grid-cols-1 md:grid-cols-3 gap-4 animate-fade-in-up">
+          <div>
+            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Date Range</label>
+            <div className="flex items-center gap-2">
+              <input type="date" value={advFilters.date_from} onChange={e => setAdvFilters({ ...advFilters, date_from: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-primary focus:border-primary outline-none text-gray-700" title="From" />
+              <span className="text-gray-400">-</span>
+              <input type="date" value={advFilters.date_to} onChange={e => setAdvFilters({ ...advFilters, date_to: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-primary focus:border-primary outline-none text-gray-700" title="To" />
+            </div>
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">CTC Range (LPA)</label>
+            <div className="flex items-center gap-2">
+              <input type="number" placeholder="Min" value={advFilters.ctc_min} onChange={e => setAdvFilters({ ...advFilters, ctc_min: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-primary focus:border-primary outline-none" />
+              <span className="text-gray-400">-</span>
+              <input type="number" placeholder="Max" value={advFilters.ctc_max} onChange={e => setAdvFilters({ ...advFilters, ctc_max: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-primary focus:border-primary outline-none" />
+            </div>
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Eligible Batch</label>
+            <div className="flex gap-2">
+              <input type="text" placeholder="e.g. 2024" value={advFilters.batch} onChange={e => setAdvFilters({ ...advFilters, batch: e.target.value })} className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-primary focus:border-primary outline-none" />
+              <button onClick={fetchDrives} className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm hover:bg-indigo-700 transition-colors font-medium">
+                Apply
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Drives List */}
       <div className="space-y-4">
